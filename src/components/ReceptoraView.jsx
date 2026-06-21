@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { EmptyState, Field, StatusBadge } from "./ui.jsx";
+import {
+  EmptyState,
+  Field,
+  PriorityBadge,
+  StatusBadge,
+} from "./ui.jsx";
 
 const initialForm = {
   producto: "",
@@ -21,6 +26,7 @@ export function ReceptoraView({
     () => solicitudes.filter((solicitud) => solicitud.organizacion === user.name),
     [solicitudes, user.name],
   );
+  const productosDisponibles = inventario.filter((item) => item.cantidad > 0);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -41,14 +47,11 @@ export function ReceptoraView({
 
   return (
     <div className="dashboard two-column">
-      <section className="section-card">
+      <section className="section-card form-section">
         <div className="section-heading">
-          <span className="eyebrow">Organización receptora</span>
-          <h2>Registrar solicitud</h2>
-          <p>
-            Indica qué alimento necesitas. Si el banco lo asigna y coordina la
-            entrega, podrás confirmar la recepción desde tu historial.
-          </p>
+          <span className="eyebrow">Nueva necesidad</span>
+          <h2>Solicitar alimentos</h2>
+          <p>Registra el producto requerido, la cantidad y su nivel de prioridad.</p>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>
@@ -58,10 +61,16 @@ export function ReceptoraView({
               onChange={(event) =>
                 setForm({ ...form, producto: event.target.value })
               }
-              placeholder="Ej. arroz, frijoles, plátano"
+              list="productos-disponibles"
+              placeholder="Selecciona o escribe un producto"
             />
           </Field>
-          <Field label="Cantidad">
+          <datalist id="productos-disponibles">
+            {productosDisponibles.map((item) => (
+              <option value={item.producto} key={item.id} />
+            ))}
+          </datalist>
+          <Field label="Cantidad requerida">
             <input
               value={form.cantidad}
               onChange={(event) =>
@@ -69,7 +78,7 @@ export function ReceptoraView({
               }
               type="number"
               min="1"
-              placeholder="Unidades requeridas"
+              placeholder="Número de unidades"
             />
           </Field>
           <Field label="Prioridad">
@@ -85,22 +94,37 @@ export function ReceptoraView({
             </select>
           </Field>
           <button className="button button-primary" type="submit">
-            Registrar solicitud
+            Enviar solicitud
           </button>
         </form>
+
+        <div className="availability-summary" aria-label="Disponibilidad actual">
+          <strong>Disponibilidad actual</strong>
+          <div className="inventory-strip">
+            {productosDisponibles.length === 0 ? (
+              <span>Sin existencias disponibles</span>
+            ) : (
+              productosDisponibles.map((item) => (
+                <span key={item.id}>
+                  {item.producto} <strong>{item.cantidad}</strong>
+                </span>
+              ))
+            )}
+          </div>
+        </div>
       </section>
 
-      <section className="section-card">
+      <section className="section-card history-section">
         <div className="section-heading">
           <span className="eyebrow">Seguimiento</span>
           <h2>Mis solicitudes</h2>
-          <p>Confirma recepción cuando el banco haya coordinado la entrega.</p>
+          <p>Consulta asignaciones y confirma los alimentos recibidos.</p>
         </div>
         <div className="item-list">
           {misSolicitudes.length === 0 ? (
             <EmptyState
-              title="Sin solicitudes registradas"
-              text="Aquí aparecerán tus solicitudes y el estado de asignación."
+              title="No hay solicitudes registradas"
+              text="Tu primera solicitud aparecerá aquí después de enviarla."
             />
           ) : (
             misSolicitudes.map((solicitud) => (
@@ -112,9 +136,9 @@ export function ReceptoraView({
                   </div>
                   <StatusBadge estado={solicitud.estado} />
                 </div>
-                <p className="muted-text">
-                  Prioridad: {solicitud.prioridad || "media"}
-                </p>
+                <div className="item-footer">
+                  <PriorityBadge prioridad={solicitud.prioridad} />
+                </div>
                 {solicitud.estado === "entrega coordinada" && (
                   <div className="actions">
                     <button
@@ -127,33 +151,11 @@ export function ReceptoraView({
                   </div>
                 )}
                 {solicitud.estado === "recibida" && (
-                  <p className="status-help">
-                    Recepción confirmada. Esta solicitud ya cerró el ciclo.
+                  <p className="item-note item-note-success">
+                    Recepción confirmada.
                   </p>
                 )}
               </article>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="section-card section-wide">
-        <div className="section-heading">
-          <span className="eyebrow">Referencia</span>
-          <h2>Inventario visible para la prueba</h2>
-          <p>
-            Esta lista ayuda a los compañeros a probar solicitudes con productos
-            que el banco puede asignar.
-          </p>
-        </div>
-        <div className="inventory-strip">
-          {inventario.length === 0 ? (
-            <span>No hay inventario disponible por ahora.</span>
-          ) : (
-            inventario.map((item) => (
-              <span key={item.id}>
-                {item.producto}: <strong>{item.cantidad}</strong>
-              </span>
             ))
           )}
         </div>

@@ -30,9 +30,6 @@ export default function App() {
     const solicitudesPendientes = solicitudes.filter(
       (solicitud) => solicitud.estado === "pendiente",
     ).length;
-    const entregasCoordinadas = solicitudes.filter(
-      (solicitud) => solicitud.estado === "entrega coordinada",
-    ).length;
     const inventarioDisponible = inventario.reduce(
       (total, item) => total + item.cantidad,
       0,
@@ -41,7 +38,6 @@ export default function App() {
     return {
       donacionesPendientes,
       solicitudesPendientes,
-      entregasCoordinadas,
       inventarioDisponible,
       productosInventario: inventario.length,
     };
@@ -228,7 +224,7 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <AppHeader user={currentUser} stats={bancoStats} onLogout={handleLogout} />
+      <AppHeader user={currentUser} onLogout={handleLogout} />
       {toast && <Toast toast={toast} />}
 
       {currentUser.role === "banco" && (

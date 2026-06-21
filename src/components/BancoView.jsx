@@ -1,4 +1,19 @@
-import { EmptyState, StatCard, StatusBadge } from "./ui.jsx";
+import { useMemo, useState } from "react";
+import {
+  EmptyState,
+  ExpiryBadge,
+  PriorityBadge,
+  StatCard,
+  StatusBadge,
+} from "./ui.jsx";
+import { formatDate, getExpiryInfo } from "../utils/dateUtils.js";
+
+const tabs = [
+  { id: "donaciones", label: "Donaciones" },
+  { id: "inventario", label: "Inventario" },
+  { id: "solicitudes", label: "Solicitudes" },
+  { id: "entregas", label: "Entregas" },
+];
 
 export function BancoView({
   donaciones,
@@ -10,22 +25,49 @@ export function BancoView({
   onAsignarSolicitud,
   onCoordinarEntrega,
 }) {
+  const [activeTab, setActiveTab] = useState("donaciones");
+
+  const solicitudesPendientes = solicitudes.filter(
+    (solicitud) => solicitud.estado === "pendiente",
+  );
+  const entregas = solicitudes.filter(
+    (solicitud) => solicitud.estado !== "pendiente",
+  );
+  const entregasActivas = entregas.filter(
+    (solicitud) => solicitud.estado !== "recibida",
+  );
+  const inventarioOrdenado = useMemo(
+    () =>
+      [...inventario].sort(
+        (a, b) => new Date(a.vencimiento) - new Date(b.vencimiento),
+      ),
+    [inventario],
+  );
+  const productosUrgentes = inventario.filter((item) => {
+    const level = getExpiryInfo(item.vencimiento).level;
+    return level === "critical" || level === "warning" || level === "expired";
+  }).length;
+
+  const tabCounts = {
+    donaciones: stats.donacionesPendientes,
+    inventario: inventario.length,
+    solicitudes: solicitudesPendientes.length,
+    entregas: entregasActivas.length,
+  };
+
   return (
-    <div className="dashboard banco-dashboard">
-      <section className="section-card section-wide command-card">
+    <div className="banco-dashboard">
+      <section className="bank-overview" aria-labelledby="bank-overview-title">
         <div className="section-heading">
-          <span className="eyebrow">Panel principal</span>
-          <h2>Operación del banco</h2>
-          <p>
-            Revisa donaciones, administra inventario y atiende solicitudes hasta
-            dejar la entrega lista para que la organización confirme recepción.
-          </p>
+          <span className="eyebrow">Resumen operativo</span>
+          <h2 id="bank-overview-title">Estado de la operación</h2>
+          <p>Prioriza pendientes, existencias y entregas desde este panel.</p>
         </div>
-        <div className="stats-row">
+        <div className="stats-row bank-stats">
           <StatCard
-            label="Productos distintos"
-            value={stats.productosInventario}
-            hint="en bodega"
+            label="Unidades disponibles"
+            value={stats.inventarioDisponible}
+            hint={`${stats.productosInventario} productos`}
           />
           <StatCard
             label="Donaciones pendientes"
@@ -33,173 +75,268 @@ export function BancoView({
             hint="por revisar"
           />
           <StatCard
-            label="Entregas coordinadas"
-            value={stats.entregasCoordinadas}
-            hint="por confirmar"
+            label="Solicitudes pendientes"
+            value={stats.solicitudesPendientes}
+            hint="por asignar"
+          />
+          <StatCard
+            label="Vencimiento próximo"
+            value={productosUrgentes}
+            hint="requieren atención"
           />
         </div>
-        <ol className="flow-steps" aria-label="Flujo de distribución">
-          <li>Donación reportada</li>
-          <li>Revisión del banco</li>
-          <li>Inventario</li>
-          <li>Solicitud asignada</li>
-          <li>Entrega coordinada</li>
-          <li>Recepción confirmada</li>
-        </ol>
       </section>
 
-      <section className="section-card">
-        <div className="section-heading">
-          <span className="eyebrow">Entrada</span>
-          <h2>Donaciones recibidas</h2>
-          <p>Las donaciones aceptadas entran al inventario disponible.</p>
-        </div>
-        <div className="item-list">
-          {donaciones.length === 0 ? (
-            <EmptyState
-              title="Sin donaciones"
-              text="Cuando un donante reporte alimentos aparecerán aquí para revisión."
-            />
-          ) : (
-            donaciones.map((donacion) => (
-              <article className="list-item" key={donacion.id}>
-                <div className="item-top">
-                  <div>
-                    <strong>{donacion.producto}</strong>
-                    <p>{donacion.donante}</p>
-                  </div>
-                  <StatusBadge estado={donacion.estado} />
-                </div>
-                <dl className="meta-grid">
-                  <div>
-                    <dt>Cantidad</dt>
-                    <dd>{donacion.cantidad} unidades</dd>
-                  </div>
-                  <div>
-                    <dt>Vence</dt>
-                    <dd>{donacion.vencimiento}</dd>
-                  </div>
-                </dl>
-                {donacion.estado === "pendiente" && (
-                  <div className="actions">
-                    <button
-                      className="button button-primary"
-                      type="button"
-                      onClick={() => onAceptarDonacion(donacion.id)}
-                    >
-                      Aceptar
-                    </button>
-                    <button
-                      className="button button-muted"
-                      type="button"
-                      onClick={() => onRechazarDonacion(donacion.id)}
-                    >
-                      Rechazar
-                    </button>
-                  </div>
-                )}
-              </article>
-            ))
-          )}
-        </div>
-      </section>
+      <nav className="bank-tabs" aria-label="Áreas de gestión" role="tablist">
+        {tabs.map((tab) => (
+          <button
+            className={`bank-tab ${activeTab === tab.id ? "is-active" : ""}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <span>{tab.label}</span>
+            <small>{tabCounts[tab.id]}</small>
+          </button>
+        ))}
+      </nav>
 
-      <section className="section-card">
-        <div className="section-heading">
-          <span className="eyebrow">Bodega</span>
-          <h2>Inventario disponible</h2>
-          <p>Este inventario se usa para validar si una solicitud puede asignarse.</p>
-        </div>
-        <div className="item-list compact-list">
-          {inventario.length === 0 ? (
-            <EmptyState
-              title="Inventario vacío"
-              text="Las donaciones aceptadas se agregarán automáticamente."
-            />
-          ) : (
-            inventario.map((item) => (
-              <article className="list-item inventory-item" key={item.id}>
-                <div className="item-top">
-                  <div>
-                    <strong>{item.producto}</strong>
-                    <p>Vence {item.vencimiento}</p>
-                  </div>
-                  <span className="quantity-badge">{item.cantidad}</span>
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-      </section>
+      <section className="bank-panel" role="tabpanel">
+        {activeTab === "donaciones" && (
+          <DonationPanel
+            donaciones={donaciones}
+            onAceptar={onAceptarDonacion}
+            onRechazar={onRechazarDonacion}
+          />
+        )}
 
-      <section className="section-card section-wide">
-        <div className="section-heading">
-          <span className="eyebrow">Salida</span>
-          <h2>Solicitudes de organizaciones</h2>
-          <p>
-            Asigna desde inventario y luego coordina la entrega para que la
-            organización pueda confirmar recepción.
-          </p>
-        </div>
-        <div className="requests-grid">
-          {solicitudes.length === 0 ? (
-            <EmptyState
-              title="Sin solicitudes"
-              text="Las organizaciones receptoras aún no han registrado necesidades."
-            />
-          ) : (
-            solicitudes.map((solicitud) => (
-              <article className="list-item" key={solicitud.id}>
-                <div className="item-top">
-                  <div>
-                    <strong>{solicitud.producto}</strong>
-                    <p>{solicitud.organizacion}</p>
-                  </div>
-                  <StatusBadge estado={solicitud.estado} />
-                </div>
-                <dl className="meta-grid">
-                  <div>
-                    <dt>Cantidad</dt>
-                    <dd>{solicitud.cantidad} unidades</dd>
-                  </div>
-                  <div>
-                    <dt>Prioridad</dt>
-                    <dd>{solicitud.prioridad || "media"}</dd>
-                  </div>
-                </dl>
-                {solicitud.estado === "pendiente" && (
-                  <div className="actions">
-                    <button
-                      className="button button-primary"
-                      type="button"
-                      onClick={() => onAsignarSolicitud(solicitud.id)}
-                    >
-                      Asignar desde inventario
-                    </button>
-                  </div>
-                )}
-                {solicitud.estado === "asignada" && (
-                  <div className="actions">
-                    <button
-                      className="button button-primary"
-                      type="button"
-                      onClick={() => onCoordinarEntrega(solicitud.id)}
-                    >
-                      Coordinar entrega
-                    </button>
-                  </div>
-                )}
-                {solicitud.estado === "entrega coordinada" && (
-                  <p className="status-help">
-                    Lista para que la organización receptora confirme que recibió
-                    los alimentos.
-                  </p>
-                )}
-              </article>
-            ))
-          )}
-        </div>
+        {activeTab === "inventario" && (
+          <InventoryPanel inventario={inventarioOrdenado} />
+        )}
+
+        {activeTab === "solicitudes" && (
+          <RequestsPanel
+            solicitudes={solicitudesPendientes}
+            onAsignar={onAsignarSolicitud}
+          />
+        )}
+
+        {activeTab === "entregas" && (
+          <DeliveriesPanel
+            entregas={entregas}
+            onCoordinar={onCoordinarEntrega}
+          />
+        )}
       </section>
     </div>
+  );
+}
+
+function PanelHeading({ eyebrow, title, text }) {
+  return (
+    <div className="panel-heading">
+      <div>
+        <span className="eyebrow">{eyebrow}</span>
+        <h2>{title}</h2>
+      </div>
+      <p>{text}</p>
+    </div>
+  );
+}
+
+function DonationPanel({ donaciones, onAceptar, onRechazar }) {
+  return (
+    <>
+      <PanelHeading
+        eyebrow="Recepción"
+        title="Donaciones registradas"
+        text="Revisa disponibilidad y vencimiento antes de incorporar alimentos al inventario."
+      />
+      <div className="management-list">
+        {donaciones.length === 0 ? (
+          <EmptyState
+            title="No hay donaciones registradas"
+            text="Las nuevas donaciones aparecerán aquí para su revisión."
+          />
+        ) : (
+          donaciones.map((donacion) => (
+            <article className="management-item" key={donacion.id}>
+              <div className="item-primary">
+                <div className="item-title-line">
+                  <strong>{donacion.producto}</strong>
+                  <StatusBadge estado={donacion.estado} />
+                </div>
+                <p>{donacion.donante}</p>
+              </div>
+              <div className="item-facts">
+                <span><small>Cantidad</small>{donacion.cantidad} unidades</span>
+                <span><small>Vencimiento</small>{formatDate(donacion.vencimiento)}</span>
+                <ExpiryBadge date={donacion.vencimiento} />
+              </div>
+              {donacion.estado === "pendiente" && (
+                <div className="item-actions">
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    onClick={() => onAceptar(donacion.id)}
+                  >
+                    Aceptar
+                  </button>
+                  <button
+                    className="button button-muted"
+                    type="button"
+                    onClick={() => onRechazar(donacion.id)}
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              )}
+            </article>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+function InventoryPanel({ inventario }) {
+  return (
+    <>
+      <PanelHeading
+        eyebrow="Bodega"
+        title="Inventario disponible"
+        text="Los productos se ordenan por fecha de vencimiento para facilitar su salida prioritaria."
+      />
+      <div className="inventory-table" role="table" aria-label="Inventario">
+        <div className="inventory-row inventory-header" role="row">
+          <span>Producto</span>
+          <span>Existencias</span>
+          <span>Vencimiento</span>
+          <span>Condición</span>
+        </div>
+        {inventario.length === 0 ? (
+          <EmptyState
+            title="Inventario vacío"
+            text="Las donaciones aceptadas se agregarán automáticamente."
+          />
+        ) : (
+          inventario.map((item) => {
+            const expiry = getExpiryInfo(item.vencimiento);
+            return (
+              <article
+                className={`inventory-row inventory-${expiry.level}`}
+                role="row"
+                key={item.id}
+              >
+                <strong>{item.producto}</strong>
+                <span>{item.cantidad} unidades</span>
+                <span>{formatDate(item.vencimiento)}</span>
+                <ExpiryBadge date={item.vencimiento} />
+              </article>
+            );
+          })
+        )}
+      </div>
+    </>
+  );
+}
+
+function RequestsPanel({ solicitudes, onAsignar }) {
+  return (
+    <>
+      <PanelHeading
+        eyebrow="Necesidades"
+        title="Solicitudes pendientes"
+        text="Valida existencias y prioridad antes de reservar productos del inventario."
+      />
+      <div className="management-list">
+        {solicitudes.length === 0 ? (
+          <EmptyState
+            title="No hay solicitudes pendientes"
+            text="Las solicitudes nuevas aparecerán aquí para su asignación."
+          />
+        ) : (
+          solicitudes.map((solicitud) => (
+            <article className="management-item" key={solicitud.id}>
+              <div className="item-primary">
+                <div className="item-title-line">
+                  <strong>{solicitud.producto}</strong>
+                  <PriorityBadge prioridad={solicitud.prioridad} />
+                </div>
+                <p>{solicitud.organizacion}</p>
+              </div>
+              <div className="item-facts">
+                <span><small>Cantidad</small>{solicitud.cantidad} unidades</span>
+                <StatusBadge estado={solicitud.estado} />
+              </div>
+              <div className="item-actions">
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={() => onAsignar(solicitud.id)}
+                >
+                  Asignar inventario
+                </button>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+function DeliveriesPanel({ entregas, onCoordinar }) {
+  return (
+    <>
+      <PanelHeading
+        eyebrow="Distribución"
+        title="Seguimiento de entregas"
+        text="Coordina solicitudes asignadas y consulta las recepciones confirmadas."
+      />
+      <div className="management-list">
+        {entregas.length === 0 ? (
+          <EmptyState
+            title="No hay entregas en seguimiento"
+            text="Las solicitudes asignadas pasarán a esta sección."
+          />
+        ) : (
+          entregas.map((entrega) => (
+            <article className="management-item" key={entrega.id}>
+              <div className="item-primary">
+                <div className="item-title-line">
+                  <strong>{entrega.producto}</strong>
+                  <StatusBadge estado={entrega.estado} />
+                </div>
+                <p>{entrega.organizacion}</p>
+              </div>
+              <div className="item-facts">
+                <span><small>Cantidad</small>{entrega.cantidad} unidades</span>
+                <PriorityBadge prioridad={entrega.prioridad} />
+              </div>
+              {entrega.estado === "asignada" && (
+                <div className="item-actions">
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    onClick={() => onCoordinar(entrega.id)}
+                  >
+                    Coordinar entrega
+                  </button>
+                </div>
+              )}
+              {entrega.estado === "entrega coordinada" && (
+                <p className="item-note">Esperando confirmación de la organización.</p>
+              )}
+              {entrega.estado === "recibida" && (
+                <p className="item-note item-note-success">Recepción confirmada.</p>
+              )}
+            </article>
+          ))
+        )}
+      </div>
+    </>
   );
 }

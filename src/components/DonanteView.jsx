@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { EmptyState, Field, StatusBadge } from "./ui.jsx";
+import { EmptyState, ExpiryBadge, Field, StatusBadge } from "./ui.jsx";
+import { formatDate, getTodayInputValue } from "../utils/dateUtils.js";
 
 const initialForm = {
   producto: "",
@@ -7,8 +8,19 @@ const initialForm = {
   vencimiento: "",
 };
 
+const suggestedProducts = [
+  "Arroz",
+  "Frijoles",
+  "Leche UHT",
+  "Pan empacado",
+  "Pasta",
+  "Plátano",
+  "Vegetales",
+];
+
 export function DonanteView({ user, donaciones, onSubmit, showToast }) {
   const [form, setForm] = useState(initialForm);
+  const today = getTodayInputValue();
 
   const misDonaciones = useMemo(
     () => donaciones.filter((donacion) => donacion.donante === user.name),
@@ -34,14 +46,11 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
 
   return (
     <div className="dashboard two-column">
-      <section className="section-card">
+      <section className="section-card form-section">
         <div className="section-heading">
-          <span className="eyebrow">Donante</span>
-          <h2>Reportar donación</h2>
-          <p>
-            Registra alimentos disponibles para que el banco los revise y los
-            agregue al inventario si cumplen las condiciones.
-          </p>
+          <span className="eyebrow">Nueva disponibilidad</span>
+          <h2>Registrar donación</h2>
+          <p>Indica el alimento, la cantidad disponible y su vencimiento.</p>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>
@@ -51,10 +60,16 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
               onChange={(event) =>
                 setForm({ ...form, producto: event.target.value })
               }
-              placeholder="Ej. arroz, frijoles, pan"
+              list="productos-donacion"
+              placeholder="Selecciona o escribe un producto"
             />
           </Field>
-          <Field label="Cantidad">
+          <datalist id="productos-donacion">
+            {suggestedProducts.map((product) => (
+              <option value={product} key={product} />
+            ))}
+          </datalist>
+          <Field label="Cantidad disponible">
             <input
               value={form.cantidad}
               onChange={(event) =>
@@ -62,7 +77,7 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
               }
               type="number"
               min="1"
-              placeholder="Unidades disponibles"
+              placeholder="Número de unidades"
             />
           </Field>
           <Field label="Fecha de vencimiento">
@@ -72,25 +87,26 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
                 setForm({ ...form, vencimiento: event.target.value })
               }
               type="date"
+              min={today}
             />
           </Field>
           <button className="button button-primary" type="submit">
-            Reportar donación
+            Registrar donación
           </button>
         </form>
       </section>
 
-      <section className="section-card">
+      <section className="section-card history-section">
         <div className="section-heading">
-          <span className="eyebrow">Historial</span>
+          <span className="eyebrow">Seguimiento</span>
           <h2>Mis donaciones</h2>
-          <p>Revisa si el banco dejó tu donación pendiente, aceptada o rechazada.</p>
+          <p>Consulta la revisión de los alimentos que has registrado.</p>
         </div>
         <div className="item-list">
           {misDonaciones.length === 0 ? (
             <EmptyState
-              title="Aún no hay donaciones"
-              text="Cuando registres una donación podrás revisar su estado aquí."
+              title="No hay donaciones registradas"
+              text="Tu primera donación aparecerá aquí después de enviarla."
             />
           ) : (
             misDonaciones.map((donacion) => (
@@ -102,7 +118,10 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
                   </div>
                   <StatusBadge estado={donacion.estado} />
                 </div>
-                <p className="muted-text">Vencimiento: {donacion.vencimiento}</p>
+                <div className="item-footer">
+                  <span>Vence {formatDate(donacion.vencimiento)}</span>
+                  <ExpiryBadge date={donacion.vencimiento} />
+                </div>
               </article>
             ))
           )}

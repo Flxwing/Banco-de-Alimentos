@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  demoSequence,
-  roleDescriptions,
-  roleLabels,
-} from "../data/mockData.js";
+import { roleLabels } from "../data/mockData.js";
 import { Field, RoleBadge } from "./ui.jsx";
 
 export function LoginView({ users, error, onLogin }) {
@@ -17,24 +13,24 @@ export function LoginView({ users, error, onLogin }) {
   return (
     <section className="login-view">
       <div className="login-hero">
-        <span className="eyebrow">Banco de Alimentos</span>
-        <h1>Acceso para la prueba en clase</h1>
+        <span className="eyebrow">Red solidaria de distribución</span>
+        <h1>Banco de Alimentos</h1>
         <p>
-          Entra como banco, donante u organización receptora para probar el
-          flujo completo de distribución con datos simulados.
+          Coordinamos donaciones, inventario y entregas para acercar alimentos
+          disponibles a organizaciones que los necesitan.
         </p>
-        <div className="login-highlights">
-          <span>Datos simulados</span>
-          <span>Usuarios listos</span>
-          <span>Sin backend</span>
+        <div className="login-highlights" aria-label="Servicios principales">
+          <span>Donaciones</span>
+          <span>Inventario</span>
+          <span>Distribución</span>
         </div>
       </div>
 
       <div className="login-card">
-        <div className="section-heading">
-          <span className="eyebrow">Iniciar sesión</span>
-          <h2>Selecciona un usuario de prueba</h2>
-          <p>Todos los usuarios usan la contraseña 1234.</p>
+        <div className="section-heading login-heading">
+          <span className="eyebrow">Acceso seguro</span>
+          <h2>Iniciar sesión</h2>
+          <p>Ingresa con las credenciales asignadas a tu organización.</p>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>
@@ -44,7 +40,8 @@ export function LoginView({ users, error, onLogin }) {
               onChange={(event) =>
                 setForm({ ...form, username: event.target.value })
               }
-              placeholder="Ej. banco1"
+              autoComplete="username"
+              placeholder="Nombre de usuario"
             />
           </Field>
           <Field label="Contraseña">
@@ -54,44 +51,18 @@ export function LoginView({ users, error, onLogin }) {
                 setForm({ ...form, password: event.target.value })
               }
               type="password"
-              placeholder="1234"
+              autoComplete="current-password"
+              placeholder="Contraseña"
             />
           </Field>
           {error && <p className="form-error">{error}</p>}
           <button className="button button-primary" type="submit">
-            Entrar al prototipo
+            Ingresar
           </button>
         </form>
 
-        <section className="poc-guide" aria-label="Guía de uso">
-          <div className="guide-block">
-            <span className="eyebrow">Guía rápida</span>
-            <h3>Qué prueba cada rol</h3>
-            <div className="role-guide-grid">
-              {Object.entries(roleLabels).map(([role, label]) => (
-                <article className="role-guide" key={role}>
-                  <RoleBadge role={role} label={label} />
-                  <p>{roleDescriptions[role]}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <div className="guide-block">
-            <span className="eyebrow">Secuencia sugerida</span>
-            <ol className="demo-sequence">
-              {demoSequence.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section className="demo-users-section" aria-label="Usuarios de prueba">
-          <div className="section-heading compact-heading">
-            <span className="eyebrow">Usuarios de prueba</span>
-            <h3>Accesos para compañeros</h3>
-          </div>
+        <details className="account-directory">
+          <summary>Seleccionar cuenta disponible</summary>
           <div className="demo-users">
             {users.map((user) => (
               <button
@@ -103,17 +74,14 @@ export function LoginView({ users, error, onLogin }) {
                 }
               >
                 <span>
-                  <strong>{user.username}</strong>
-                  <small>{user.name}</small>
+                  <strong>{user.name}</strong>
+                  <small>{user.username}</small>
                 </span>
-                <span className="user-meta">
-                  <RoleBadge role={user.role} label={roleLabels[user.role]} />
-                  <small>Clave: {user.password}</small>
-                </span>
+                <RoleBadge role={user.role} label={roleLabels[user.role]} />
               </button>
             ))}
           </div>
-        </section>
+        </details>
       </div>
     </section>
   );

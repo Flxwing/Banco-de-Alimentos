@@ -4,20 +4,6 @@ export const roleLabels = {
   receptora: "Organización receptora",
 };
 
-export const roleDescriptions = {
-  banco: "Revisa donaciones, administra inventario, asigna solicitudes y coordina entregas.",
-  donante: "Reporta alimentos disponibles para que el banco los revise.",
-  receptora: "Solicita alimentos y confirma cuando recibe una entrega.",
-};
-
-export const demoSequence = [
-  "Entra como donante y reporta una donación.",
-  "Entra como banco, acepta la donación y revisa el inventario.",
-  "Entra como receptora y registra una solicitud.",
-  "Vuelve al banco, asigna la solicitud y coordina la entrega.",
-  "Regresa como receptora y confirma la recepción.",
-];
-
 export const mockUsers = [
   {
     id: "banco1",
@@ -91,7 +77,7 @@ export const initialDonaciones = [
     donante: "Supermercado San Carlos",
     producto: "Arroz",
     cantidad: 20,
-    vencimiento: "2026-06-25",
+    vencimiento: "2026-06-28",
     estado: "pendiente",
   },
   {
@@ -99,7 +85,7 @@ export const initialDonaciones = [
     donante: "Panadería La Espiga",
     producto: "Pan empacado",
     cantidad: 15,
-    vencimiento: "2026-06-20",
+    vencimiento: "2026-06-23",
     estado: "pendiente",
   },
   {
@@ -107,7 +93,7 @@ export const initialDonaciones = [
     donante: "Finca El Porvenir",
     producto: "Plátano",
     cantidad: 30,
-    vencimiento: "2026-06-18",
+    vencimiento: "2026-06-24",
     estado: "aceptada",
   },
 ];
@@ -158,6 +144,12 @@ export const initialInventario = [
     id: 2,
     producto: "Plátano",
     cantidad: 18,
-    vencimiento: "2026-06-18",
+    vencimiento: "2026-06-24",
+  },
+  {
+    id: 3,
+    producto: "Leche UHT",
+    cantidad: 8,
+    vencimiento: "2026-06-22",
   },
 ];

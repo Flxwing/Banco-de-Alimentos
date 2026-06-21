@@ -13,6 +13,21 @@ export function StatusBadge({ estado }) {
   return <span className={`status-badge status-${statusClass}`}>{estado}</span>;
 }
 
+export function PriorityBadge({ prioridad = "media" }) {
+  return (
+    <span className={`priority-badge priority-${prioridad}`}>
+      Prioridad {prioridad}
+    </span>
+  );
+}
+
+export function ExpiryBadge({ date }) {
+  const info = getExpiryInfo(date);
+  return (
+    <span className={`expiry-badge expiry-${info.level}`}>{info.label}</span>
+  );
+}
+
 export function RoleBadge({ role, label }) {
   return <span className={`role-badge role-${role}`}>{label}</span>;
 }
@@ -34,3 +49,4 @@ export function Field({ label, children }) {
     </label>
   );
 }
+import { getExpiryInfo } from "../utils/dateUtils.js";
