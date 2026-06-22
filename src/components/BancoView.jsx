@@ -30,8 +30,9 @@ export function BancoView({
   onCoordinarEntrega,
   pinnedDonors,
   pinnedRecipients,
+  frequentRequests,
   onToggleDonor,
-  onToggleRecipient,
+  onResolveFrequentRequest,
 }) {
   const [activeTab, setActiveTab] = useState("donaciones");
 
@@ -108,8 +109,14 @@ export function BancoView({
       <FrequentActors
         donors={pinnedDonors}
         recipients={pinnedRecipients}
+        donaciones={donaciones}
+        solicitudes={solicitudes}
         onToggleDonor={onToggleDonor}
-        onToggleRecipient={onToggleRecipient}
+      />
+
+      <FrequentRequestsReview
+        requests={frequentRequests}
+        onResolve={onResolveFrequentRequest}
       />
 
       <nav className="bank-tabs" aria-label="Áreas de gestión" role="tablist">
@@ -148,8 +155,6 @@ export function BancoView({
           <RequestsPanel
             solicitudes={solicitudesPendientes}
             onAsignar={onAsignarSolicitud}
-            pinnedRecipients={pinnedRecipients}
-            onToggleRecipient={onToggleRecipient}
           />
         )}
 
@@ -158,8 +163,6 @@ export function BancoView({
             activas={entregasActivas}
             finalizadas={entregasFinalizadas}
             onCoordinar={onCoordinarEntrega}
-            pinnedRecipients={pinnedRecipients}
-            onToggleRecipient={onToggleRecipient}
           />
         )}
       </section>
@@ -170,26 +173,81 @@ export function BancoView({
 function FrequentActors({
   donors,
   recipients,
+  donaciones,
+  solicitudes,
   onToggleDonor,
-  onToggleRecipient,
 }) {
+  const donorSummaries = useMemo(
+    () => buildActorSummaries(donors, donaciones, "donante"),
+    [donors, donaciones],
+  );
+  const recipientSummaries = useMemo(
+    () => buildActorSummaries(recipients, solicitudes, "organizacion"),
+    [recipients, solicitudes],
+  );
+
   return (
     <section className="frequent-actors" aria-label="Actores frecuentes">
       <FrequentGroup
         title="Donadores frecuentes"
-        actors={donors}
+        actors={donorSummaries}
+        productLabel="Dona habitualmente"
+        lastActivityLabel="Última donación"
         onToggle={onToggleDonor}
       />
       <FrequentGroup
         title="Receptores frecuentes"
-        actors={recipients}
-        onToggle={onToggleRecipient}
+        actors={recipientSummaries}
+        productLabel="Solicita habitualmente"
+        lastActivityLabel="Última solicitud"
       />
     </section>
   );
 }
 
-function FrequentGroup({ title, actors, onToggle }) {
+function buildActorSummaries(actorNames, records, actorField) {
+  return actorNames.map((name) => {
+    const actorRecords = records.filter((record) => record[actorField] === name);
+    const countValues = (field) =>
+      actorRecords.reduce((counts, record) => {
+        const value = record[field];
+        if (value) counts[value] = (counts[value] || 0) + 1;
+        return counts;
+      }, {});
+    const byFrequency = (counts) =>
+      Object.entries(counts).sort(
+        ([firstValue, firstCount], [secondValue, secondCount]) =>
+          secondCount - firstCount || firstValue.localeCompare(secondValue),
+      );
+    const products = byFrequency(countValues("producto"))
+      .slice(0, 2)
+      .map(([product]) => product);
+    const category = byFrequency(countValues("tipo"))[0]?.[0];
+    const latest = [...actorRecords]
+      .filter((record) => record.fechaRegistro)
+      .sort(
+        (first, second) =>
+          new Date(second.fechaRegistro) - new Date(first.fechaRegistro),
+      )[0];
+
+    return {
+      name,
+      products: products.length ? products.join(", ") : "Sin historial",
+      category: category || "Sin categoría",
+      lastActivity: latest
+        ? formatDate(latest.fechaRegistro)
+        : "Sin fecha registrada",
+    };
+  });
+}
+
+function FrequentGroup({
+  title,
+  actors,
+  productLabel,
+  lastActivityLabel,
+  onToggle,
+}) {
   return (
     <div className="frequent-group">
       <strong>{title}</strong>
@@ -198,20 +256,101 @@ function FrequentGroup({ title, actors, onToggle }) {
           <span className="frequent-empty">Sin favoritos</span>
         ) : (
           actors.map((actor) => (
-            <button
-              className="frequent-chip"
-              type="button"
-              title={`Quitar ${actor} de frecuentes`}
-              onClick={() => onToggle(actor)}
-              key={actor}
-            >
-              <span aria-hidden="true">★</span>
-              {actor}
-            </button>
+            <article className="frequent-card" key={actor.name}>
+              <div className="frequent-card-heading">
+                <strong>{actor.name}</strong>
+                {onToggle ? (
+                  <button
+                    className="pin-button is-pinned"
+                    type="button"
+                    aria-label={`Quitar ${actor.name} de frecuentes`}
+                    aria-pressed="true"
+                    title="Quitar de frecuentes"
+                    onClick={() => onToggle(actor.name)}
+                  >
+                    <span aria-hidden="true">★</span>
+                  </button>
+                ) : (
+                  <StatusBadge estado="aprobada" />
+                )}
+              </div>
+              <dl className="frequent-summary">
+                <div>
+                  <dt>{productLabel}</dt>
+                  <dd>{actor.products}</dd>
+                </div>
+                <div>
+                  <dt>Categoría más común</dt>
+                  <dd>{actor.category}</dd>
+                </div>
+                <div>
+                  <dt>{lastActivityLabel}</dt>
+                  <dd>{actor.lastActivity}</dd>
+                </div>
+              </dl>
+            </article>
           ))
         )}
       </div>
     </div>
+  );
+}
+
+function FrequentRequestsReview({ requests, onResolve }) {
+  const pendingRequests = requests.filter(
+    (request) => request.estado === "pendiente",
+  );
+
+  return (
+    <section
+      className="frequent-requests-review"
+      aria-labelledby="frequent-requests-title"
+    >
+      <div className="review-heading">
+        <div>
+          <span className="eyebrow">Programa de frecuentes</span>
+          <h2 id="frequent-requests-title">Solicitudes de receptoras</h2>
+        </div>
+        <span className="review-count">{pendingRequests.length} pendientes</span>
+      </div>
+
+      {requests.length === 0 ? (
+        <p className="frequent-empty">Aún no hay solicitudes registradas.</p>
+      ) : (
+        <div className="frequent-request-list">
+          {requests.map((request) => (
+            <article className="frequent-request-item" key={request.id}>
+              <div>
+                <strong>{request.organizacion}</strong>
+                <p>Solicitada el {formatDate(request.fechaSolicitud)}</p>
+              </div>
+              <StatusBadge estado={request.estado} />
+              {request.estado === "pendiente" && (
+                <div className="item-actions">
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    onClick={() => onResolve(request.id, "aprobada")}
+                  >
+                    Aprobar
+                  </button>
+                  <button
+                    className="button button-muted"
+                    type="button"
+                    onClick={() => onResolve(request.id, "rechazada")}
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              )}
+              {request.fechaDecision && (
+                <small>Resuelta el {formatDate(request.fechaDecision)}</small>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -285,6 +424,21 @@ function DonationItem({
   onToggleDonor,
 }) {
   const isPending = donacion.estado === "pendiente";
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionError, setRejectionError] = useState("");
+
+  const handleReject = (event) => {
+    event.preventDefault();
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      setRejectionError("El motivo del rechazo es obligatorio.");
+      return;
+    }
+
+    onRechazar(donacion.id, reason);
+    setRejectionError("");
+  };
 
   return (
     <article className="management-item" key={donacion.id}>
@@ -318,11 +472,43 @@ function DonationItem({
           <button
             className="button button-muted"
             type="button"
-            onClick={() => onRechazar(donacion.id)}
+            onClick={() => {
+              setShowRejectForm((visible) => !visible);
+              setRejectionError("");
+            }}
           >
-            Rechazar
+            {showRejectForm ? "Cancelar" : "Rechazar"}
           </button>
         </div>
+      )}
+      {isPending && showRejectForm && (
+        <form className="rejection-form" onSubmit={handleReject}>
+          <label htmlFor={`rejection-reason-${donacion.id}`}>
+            Motivo del rechazo <span aria-hidden="true">*</span>
+          </label>
+          <textarea
+            id={`rejection-reason-${donacion.id}`}
+            value={rejectionReason}
+            onChange={(event) => {
+              setRejectionReason(event.target.value);
+              if (event.target.value.trim()) setRejectionError("");
+            }}
+            placeholder="Explica por qué no puede aceptarse esta donación"
+            rows="3"
+            required
+          />
+          {rejectionError && (
+            <p className="form-error" role="alert">{rejectionError}</p>
+          )}
+          <button className="button button-reject" type="submit">
+            Confirmar rechazo
+          </button>
+        </form>
+      )}
+      {donacion.estado === "rechazada" && donacion.motivoRechazo && (
+        <p className="rejection-reason">
+          <strong>Motivo del rechazo:</strong> {donacion.motivoRechazo}
+        </p>
       )}
     </article>
   );
@@ -374,8 +560,6 @@ function InventoryPanel({ inventario }) {
 function RequestsPanel({
   solicitudes,
   onAsignar,
-  pinnedRecipients,
-  onToggleRecipient,
 }) {
   return (
     <>
@@ -399,8 +583,6 @@ function RequestsPanel({
                 </div>
                 <ActorLine
                   name={solicitud.organizacion}
-                  isPinned={pinnedRecipients.includes(solicitud.organizacion)}
-                  onToggle={onToggleRecipient}
                   type="receptor"
                 />
               </div>
@@ -430,8 +612,6 @@ function DeliveriesPanel({
   activas,
   finalizadas,
   onCoordinar,
-  pinnedRecipients,
-  onToggleRecipient,
 }) {
   return (
     <>
@@ -450,8 +630,6 @@ function DeliveriesPanel({
             <DeliveryItem
               entrega={entrega}
               onCoordinar={onCoordinar}
-              isPinned={pinnedRecipients.includes(entrega.organizacion)}
-              onToggleRecipient={onToggleRecipient}
               key={entrega.id}
             />
           ))
@@ -465,8 +643,6 @@ function DeliveriesPanel({
         {finalizadas.map((entrega) => (
           <DeliveryItem
             entrega={entrega}
-            isPinned={pinnedRecipients.includes(entrega.organizacion)}
-            onToggleRecipient={onToggleRecipient}
             key={entrega.id}
           />
         ))}
@@ -478,8 +654,6 @@ function DeliveriesPanel({
 function DeliveryItem({
   entrega,
   onCoordinar,
-  isPinned,
-  onToggleRecipient,
 }) {
   return (
     <article className="management-item">
@@ -490,8 +664,6 @@ function DeliveryItem({
         </div>
         <ActorLine
           name={entrega.organizacion}
-          isPinned={isPinned}
-          onToggle={onToggleRecipient}
           type="receptor"
         />
       </div>
@@ -525,16 +697,18 @@ function ActorLine({ name, isPinned, onToggle, type }) {
   return (
     <div className="actor-line">
       <p>{name}</p>
-      <button
-        className={`pin-button ${isPinned ? "is-pinned" : ""}`}
-        type="button"
-        aria-label={`${isPinned ? "Quitar" : "Marcar"} ${name} como ${type} frecuente`}
-        aria-pressed={isPinned}
-        title={`${isPinned ? "Quitar de" : "Agregar a"} frecuentes`}
-        onClick={() => onToggle(name)}
-      >
-        <span aria-hidden="true">{isPinned ? "★" : "☆"}</span>
-      </button>
+      {onToggle && (
+        <button
+          className={`pin-button ${isPinned ? "is-pinned" : ""}`}
+          type="button"
+          aria-label={`${isPinned ? "Quitar" : "Marcar"} ${name} como ${type} frecuente`}
+          aria-pressed={isPinned}
+          title={`${isPinned ? "Quitar de" : "Agregar a"} frecuentes`}
+          onClick={() => onToggle(name)}
+        >
+          <span aria-hidden="true">{isPinned ? "★" : "☆"}</span>
+        </button>
+      )}
     </div>
   );
 }

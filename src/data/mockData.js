@@ -90,6 +90,7 @@ export const initialDonaciones = [
     tipo: "cereal",
     cantidad: 20,
     vencimiento: "2026-06-28",
+    fechaRegistro: "2026-06-20",
     estado: "pendiente",
   },
   {
@@ -99,6 +100,7 @@ export const initialDonaciones = [
     tipo: "panadería",
     cantidad: 15,
     vencimiento: "2026-06-23",
+    fechaRegistro: "2026-06-21",
     estado: "pendiente",
   },
   {
@@ -108,6 +110,7 @@ export const initialDonaciones = [
     tipo: "fruta",
     cantidad: 30,
     vencimiento: "2026-06-24",
+    fechaRegistro: "2026-06-19",
     estado: "aceptada",
   },
 ];
@@ -120,6 +123,7 @@ export const initialSolicitudes = [
     tipo: "cereal",
     cantidad: 10,
     prioridad: "alta",
+    fechaRegistro: "2026-06-21",
     estado: "pendiente",
   },
   {
@@ -129,6 +133,7 @@ export const initialSolicitudes = [
     tipo: "cereal",
     cantidad: 8,
     prioridad: "media",
+    fechaRegistro: "2026-06-18",
     estado: "pendiente",
   },
   {
@@ -138,6 +143,7 @@ export const initialSolicitudes = [
     tipo: "fruta",
     cantidad: 12,
     prioridad: "media",
+    fechaRegistro: "2026-06-17",
     estado: "asignada",
   },
   {
@@ -147,6 +153,7 @@ export const initialSolicitudes = [
     tipo: "fruta",
     cantidad: 6,
     prioridad: "baja",
+    fechaRegistro: "2026-06-20",
     estado: "entrega coordinada",
   },
 ];

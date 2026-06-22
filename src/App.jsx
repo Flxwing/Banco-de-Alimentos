@@ -11,11 +11,11 @@ import {
   initialSolicitudes,
   mockUsers,
 } from "./data/mockData.js";
-import { getExpiryInfo } from "./utils/dateUtils.js";
+import { getExpiryInfo, getTodayInputValue } from "./utils/dateUtils.js";
 
 const toastDuration = 2800;
 const pinnedDonorsKey = "banco-alimentos-pinned-donors";
-const pinnedRecipientsKey = "banco-alimentos-pinned-recipients";
+const frequentRequestsKey = "banco-alimentos-frequent-requests";
 
 function loadPinnedActors(key) {
   try {
@@ -37,8 +37,8 @@ export default function App() {
   const [pinnedDonors, setPinnedDonors] = useState(() =>
     loadPinnedActors(pinnedDonorsKey),
   );
-  const [pinnedRecipients, setPinnedRecipients] = useState(() =>
-    loadPinnedActors(pinnedRecipientsKey),
+  const [frequentRequests, setFrequentRequests] = useState(() =>
+    loadPinnedActors(frequentRequestsKey),
   );
 
   useEffect(() => {
@@ -51,14 +51,22 @@ export default function App() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(
-        pinnedRecipientsKey,
-        JSON.stringify(pinnedRecipients),
-      );
+      window.localStorage.setItem(frequentRequestsKey, JSON.stringify(frequentRequests));
     } catch {
-      // La sesión actual conserva los favoritos aunque el navegador bloquee storage.
+      // La sesión actual conserva las solicitudes aunque el navegador bloquee storage.
     }
-  }, [pinnedRecipients]);
+  }, [frequentRequests]);
+
+  const approvedRecipients = useMemo(
+    () => [
+      ...new Set(
+        frequentRequests
+          .filter((request) => request.estado === "aprobada")
+          .map((request) => request.organizacion),
+      ),
+    ],
+    [frequentRequests],
+  );
 
   const bancoStats = useMemo(() => {
     const donacionesPendientes = donaciones.filter(
@@ -165,13 +173,21 @@ export default function App() {
     showToast("Donación aceptada y agregada al inventario.");
   };
 
-  const rechazarDonacion = (id) => {
+  const rechazarDonacion = (id, motivoRechazo) => {
+    const motivo = motivoRechazo.trim();
+    if (!motivo) {
+      showToast("Debes registrar el motivo del rechazo.", "error");
+      return;
+    }
+
     setDonaciones((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, estado: "rechazada" } : item,
+        item.id === id
+          ? { ...item, estado: "rechazada", motivoRechazo: motivo }
+          : item,
       ),
     );
-    showToast("Donación rechazada.", "warning");
+    showToast("Donación rechazada con el motivo registrado.", "warning");
   };
 
   const asignarSolicitud = (id) => {
@@ -238,6 +254,7 @@ export default function App() {
         tipo: form.tipo,
         cantidad: Number(form.cantidad),
         vencimiento: form.vencimiento,
+        fechaRegistro: getTodayInputValue(),
         estado: "pendiente",
       },
       ...prev,
@@ -259,12 +276,53 @@ export default function App() {
         tipo: productoInventario?.tipo || "otro",
         cantidad: Number(form.cantidad),
         prioridad: form.prioridad,
+        fechaRegistro: getTodayInputValue(),
         estado: "pendiente",
       },
       ...prev,
     ]);
 
     showToast("Solicitud registrada correctamente.");
+  };
+
+  const solicitarSerFrecuente = () => {
+    const hasOpenRequest = frequentRequests.some(
+      (request) =>
+        request.organizacion === currentUser.name &&
+        ["pendiente", "aprobada"].includes(request.estado),
+    );
+
+    if (hasOpenRequest) {
+      showToast("Ya existe una solicitud pendiente o aprobada.", "warning");
+      return;
+    }
+
+    setFrequentRequests((prev) => [
+      {
+        id: Date.now(),
+        organizacion: currentUser.name,
+        estado: "pendiente",
+        fechaSolicitud: getTodayInputValue(),
+      },
+      ...prev,
+    ]);
+    showToast("Solicitud para ser frecuente enviada al Banco.");
+  };
+
+  const resolveFrequentRequest = (id, estado) => {
+    setFrequentRequests((prev) =>
+      prev.map((request) =>
+        request.id === id && request.estado === "pendiente"
+          ? { ...request, estado, fechaDecision: getTodayInputValue() }
+          : request,
+      ),
+    );
+    showToast(
+      estado === "aprobada"
+        ? "Organización aprobada como receptora frecuente."
+        : "Solicitud de frecuente rechazada.",
+      estado === "aprobada" ? "success" : "warning",
+    );
   };
 
   const togglePinnedActor = (setter, name) => {
@@ -304,11 +362,10 @@ export default function App() {
           onAsignarSolicitud={asignarSolicitud}
           onCoordinarEntrega={coordinarEntrega}
           pinnedDonors={pinnedDonors}
-          pinnedRecipients={pinnedRecipients}
+          pinnedRecipients={approvedRecipients}
+          frequentRequests={frequentRequests}
           onToggleDonor={(name) => togglePinnedActor(setPinnedDonors, name)}
-          onToggleRecipient={(name) =>
-            togglePinnedActor(setPinnedRecipients, name)
-          }
+          onResolveFrequentRequest={resolveFrequentRequest}
         />
       )}
 
@@ -328,6 +385,8 @@ export default function App() {
           inventario={inventario}
           onSubmit={registrarSolicitud}
           onConfirmarRecepcion={confirmarRecepcion}
+          frequentRequests={frequentRequests}
+          onRequestFrequent={solicitarSerFrecuente}
           showToast={showToast}
         />
       )}

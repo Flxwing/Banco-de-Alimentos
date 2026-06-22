@@ -141,6 +141,11 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
                   <span>Vence {formatDate(donacion.vencimiento)}</span>
                   <ExpiryBadge date={donacion.vencimiento} />
                 </div>
+                {donacion.estado === "rechazada" && donacion.motivoRechazo && (
+                  <p className="rejection-reason">
+                    <strong>Motivo del rechazo:</strong> {donacion.motivoRechazo}
+                  </p>
+                )}
               </article>
             ))
           )}
