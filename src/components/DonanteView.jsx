@@ -146,6 +146,30 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
                     <strong>Motivo del rechazo:</strong> {donacion.motivoRechazo}
                   </p>
                 )}
+                {donacion.estado.startsWith("aceptada") && (
+                  <dl className="donation-resolution-summary">
+                    <div>
+                      <dt>Cantidad total</dt>
+                      <dd>{donacion.cantidad} unidades</dd>
+                    </div>
+                    <div>
+                      <dt>Cantidad aceptada</dt>
+                      <dd>
+                        {donacion.cantidadAceptada ?? donacion.cantidad} unidades
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Cantidad descartada</dt>
+                      <dd>{donacion.cantidadDescartada ?? 0} unidades</dd>
+                    </div>
+                    {donacion.motivoDescarte && (
+                      <div className="resolution-reason">
+                        <dt>Motivo del descarte</dt>
+                        <dd>{donacion.motivoDescarte}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
               </article>
             ))
           )}

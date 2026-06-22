@@ -121,9 +121,27 @@ export default function App() {
     showToast("Sesión cerrada. Puedes entrar con otro usuario.");
   };
 
-  const aceptarDonacion = (id) => {
+  const aceptarDonacion = (id, acceptance) => {
     const donacion = donaciones.find((item) => item.id === id);
     if (!donacion) return;
+
+    const cantidadAceptada = Number(acceptance.cantidadAceptada);
+    const cantidadDescartada = donacion.cantidad - cantidadAceptada;
+    const motivoDescarte = acceptance.motivoDescarte.trim();
+
+    if (
+      !Number.isInteger(cantidadAceptada) ||
+      cantidadAceptada <= 0 ||
+      cantidadAceptada > donacion.cantidad
+    ) {
+      showToast("La cantidad aceptada debe ser válida.", "error");
+      return;
+    }
+
+    if (cantidadDescartada > 0 && !motivoDescarte) {
+      showToast("Debes indicar el motivo del descarte parcial.", "error");
+      return;
+    }
 
     if (getExpiryInfo(donacion.vencimiento).level === "expired") {
       showToast("No se puede aceptar una donación vencida.", "error");
@@ -132,7 +150,18 @@ export default function App() {
 
     setDonaciones((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, estado: "aceptada" } : item,
+        item.id === id
+          ? {
+              ...item,
+              estado:
+                cantidadDescartada > 0
+                  ? "aceptada parcialmente"
+                  : "aceptada",
+              cantidadAceptada,
+              cantidadDescartada,
+              motivoDescarte: cantidadDescartada > 0 ? motivoDescarte : "",
+            }
+          : item,
       ),
     );
 
@@ -148,7 +177,7 @@ export default function App() {
           item.id === existente.id
             ? {
                 ...item,
-                cantidad: item.cantidad + donacion.cantidad,
+                cantidad: item.cantidad + cantidadAceptada,
                 vencimiento:
                   donacion.vencimiento < item.vencimiento
                     ? donacion.vencimiento
@@ -164,13 +193,17 @@ export default function App() {
           id: Date.now(),
           producto: donacion.producto,
           tipo: donacion.tipo,
-          cantidad: donacion.cantidad,
+          cantidad: cantidadAceptada,
           vencimiento: donacion.vencimiento,
         },
       ];
     });
 
-    showToast("Donación aceptada y agregada al inventario.");
+    showToast(
+      cantidadDescartada > 0
+        ? "Donación aceptada parcialmente y registrada en el inventario."
+        : "Donación aceptada y agregada al inventario.",
+    );
   };
 
   const rechazarDonacion = (id, motivoRechazo) => {
@@ -285,7 +318,7 @@ export default function App() {
     showToast("Solicitud registrada correctamente.");
   };
 
-  const solicitarSerFrecuente = () => {
+  const solicitarSerFrecuente = (requestData) => {
     const hasOpenRequest = frequentRequests.some(
       (request) =>
         request.organizacion === currentUser.name &&
@@ -297,10 +330,32 @@ export default function App() {
       return;
     }
 
+    const productos = requestData.productos.map((product) => ({
+      nombre: product.nombre.trim(),
+      cantidad: Number(product.cantidad),
+    }));
+    const frecuencia = requestData.frecuencia.trim();
+
+    if (
+      productos.length === 0 ||
+      productos.some(
+        (product) =>
+          !product.nombre ||
+          !Number.isInteger(product.cantidad) ||
+          product.cantidad <= 0,
+      ) ||
+      !frecuencia
+    ) {
+      showToast("Completa todos los datos de la solicitud de frecuente.", "error");
+      return;
+    }
+
     setFrequentRequests((prev) => [
       {
         id: Date.now(),
         organizacion: currentUser.name,
+        productos,
+        frecuencia,
         estado: "pendiente",
         fechaSolicitud: getTodayInputValue(),
       },
@@ -309,11 +364,22 @@ export default function App() {
     showToast("Solicitud para ser frecuente enviada al Banco.");
   };
 
-  const resolveFrequentRequest = (id, estado) => {
+  const resolveFrequentRequest = (id, estado, motivoRechazo = "") => {
+    const motivo = motivoRechazo.trim();
+    if (estado === "rechazada" && !motivo) {
+      showToast("Debes indicar el motivo del rechazo.", "error");
+      return;
+    }
+
     setFrequentRequests((prev) =>
       prev.map((request) =>
         request.id === id && request.estado === "pendiente"
-          ? { ...request, estado, fechaDecision: getTodayInputValue() }
+          ? {
+              ...request,
+              estado,
+              fechaDecision: getTodayInputValue(),
+              motivoRechazo: estado === "rechazada" ? motivo : "",
+            }
           : request,
       ),
     );

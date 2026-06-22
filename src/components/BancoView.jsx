@@ -19,6 +19,21 @@ const tabs = [
 const finalDeliveryStates = new Set(["recibida", "completada", "cerrada"]);
 const expiryOrder = { urgent: 0, soon: 1, normal: 2, expired: 3 };
 
+function getFrequentProducts(request = {}) {
+  if (Array.isArray(request.productos) && request.productos.length > 0) {
+    return request.productos;
+  }
+  if (request.productosFrecuentes) {
+    return [
+      {
+        nombre: request.productosFrecuentes,
+        cantidad: request.cantidadHabitual,
+      },
+    ];
+  }
+  return [];
+}
+
 export function BancoView({
   donaciones,
   solicitudes,
@@ -111,6 +126,7 @@ export function BancoView({
         recipients={pinnedRecipients}
         donaciones={donaciones}
         solicitudes={solicitudes}
+        frequentRequests={frequentRequests}
         onToggleDonor={onToggleDonor}
       />
 
@@ -175,16 +191,44 @@ function FrequentActors({
   recipients,
   donaciones,
   solicitudes,
+  frequentRequests,
   onToggleDonor,
 }) {
   const donorSummaries = useMemo(
     () => buildActorSummaries(donors, donaciones, "donante"),
     [donors, donaciones],
   );
-  const recipientSummaries = useMemo(
-    () => buildActorSummaries(recipients, solicitudes, "organizacion"),
-    [recipients, solicitudes],
-  );
+  const recipientSummaries = useMemo(() => {
+    const summaries = buildActorSummaries(
+      recipients,
+      solicitudes,
+      "organizacion",
+    );
+    return summaries.map((summary) => {
+      const approvedRequest = frequentRequests.find(
+        (request) =>
+          request.organizacion === summary.name && request.estado === "aprobada",
+      );
+      const requestedProducts = getFrequentProducts(approvedRequest);
+      return {
+        ...summary,
+        products: requestedProducts.length
+          ? requestedProducts.map((product) => product.nombre).join(", ")
+          : summary.products,
+        usualAmount: requestedProducts.length
+          ? requestedProducts
+              .map(
+                (product) =>
+                  `${product.nombre}: ${product.cantidad || "sin cantidad"}${
+                    product.cantidad ? " u." : ""
+                  }`,
+              )
+              .join(" · ")
+          : "No indicada",
+        requestFrequency: approvedRequest?.frecuencia || "No indicada",
+      };
+    });
+  }, [recipients, solicitudes, frequentRequests]);
 
   return (
     <section className="frequent-actors" aria-label="Actores frecuentes">
@@ -287,6 +331,18 @@ function FrequentGroup({
                   <dt>{lastActivityLabel}</dt>
                   <dd>{actor.lastActivity}</dd>
                 </div>
+                {actor.usualAmount && (
+                  <div>
+                    <dt>Cantidad habitual</dt>
+                    <dd>{actor.usualAmount}</dd>
+                  </div>
+                )}
+                {actor.requestFrequency && (
+                  <div>
+                    <dt>Frecuencia</dt>
+                    <dd>{actor.requestFrequency}</dd>
+                  </div>
+                )}
               </dl>
             </article>
           ))
@@ -299,6 +355,9 @@ function FrequentGroup({
 function FrequentRequestsReview({ requests, onResolve }) {
   const pendingRequests = requests.filter(
     (request) => request.estado === "pendiente",
+  );
+  const resolvedRequests = requests.filter(
+    (request) => request.estado !== "pendiente",
   );
 
   return (
@@ -314,43 +373,136 @@ function FrequentRequestsReview({ requests, onResolve }) {
         <span className="review-count">{pendingRequests.length} pendientes</span>
       </div>
 
-      {requests.length === 0 ? (
-        <p className="frequent-empty">Aún no hay solicitudes registradas.</p>
+      {pendingRequests.length === 0 ? (
+        <p className="frequent-empty">No hay solicitudes pendientes.</p>
       ) : (
         <div className="frequent-request-list">
-          {requests.map((request) => (
-            <article className="frequent-request-item" key={request.id}>
-              <div>
-                <strong>{request.organizacion}</strong>
-                <p>Solicitada el {formatDate(request.fechaSolicitud)}</p>
-              </div>
-              <StatusBadge estado={request.estado} />
-              {request.estado === "pendiente" && (
-                <div className="item-actions">
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    onClick={() => onResolve(request.id, "aprobada")}
-                  >
-                    Aprobar
-                  </button>
-                  <button
-                    className="button button-muted"
-                    type="button"
-                    onClick={() => onResolve(request.id, "rechazada")}
-                  >
-                    Rechazar
-                  </button>
-                </div>
-              )}
-              {request.fechaDecision && (
-                <small>Resuelta el {formatDate(request.fechaDecision)}</small>
-              )}
-            </article>
+          {pendingRequests.map((request) => (
+            <FrequentRequestReviewItem
+              request={request}
+              onResolve={onResolve}
+              key={request.id}
+            />
           ))}
         </div>
       )}
+      {resolvedRequests.length > 0 && (
+        <details className="frequency-review-history">
+          <summary>
+            Historial de solicitudes <span>{resolvedRequests.length}</span>
+          </summary>
+          <div className="frequent-request-list">
+            {resolvedRequests.map((request) => (
+              <FrequentRequestReviewItem
+                request={request}
+                onResolve={onResolve}
+                key={request.id}
+              />
+            ))}
+          </div>
+        </details>
+      )}
     </section>
+  );
+}
+
+function FrequentRequestReviewItem({ request, onResolve }) {
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+
+  const handleReject = (event) => {
+    event.preventDefault();
+    if (!reason.trim()) {
+      setError("El motivo del rechazo es obligatorio.");
+      return;
+    }
+    onResolve(request.id, "rechazada", reason);
+  };
+
+  return (
+    <article className="frequent-request-item">
+      <div className="frequent-request-identity">
+        <strong>{request.organizacion}</strong>
+        <p>Solicitada el {formatDate(request.fechaSolicitud)}</p>
+      </div>
+      <StatusBadge estado={request.estado} />
+      <dl className="request-data-summary">
+        <div className="requested-products-detail">
+          <dt>Productos y cantidades habituales</dt>
+          <dd>
+            {getFrequentProducts(request).length > 0 ? (
+              <ul className="request-products-list">
+                {getFrequentProducts(request).map((product, index) => (
+                  <li key={`${product.nombre}-${index}`}>
+                    {product.nombre} — {product.cantidad || "Sin cantidad"}
+                    {product.cantidad ? " unidades" : ""}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              "No indicados"
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>Frecuencia</dt>
+          <dd>{request.frecuencia || "No indicada"}</dd>
+        </div>
+      </dl>
+      {request.estado === "pendiente" && (
+        <div className="item-actions frequent-decision-actions">
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => onResolve(request.id, "aprobada")}
+          >
+            Aprobar
+          </button>
+          <button
+            className="button button-muted"
+            type="button"
+            onClick={() => {
+              setShowRejectForm((visible) => !visible);
+              setError("");
+            }}
+          >
+            {showRejectForm ? "Cancelar" : "Rechazar"}
+          </button>
+        </div>
+      )}
+      {request.fechaDecision && (
+        <small className="decision-date">
+          Resuelta el {formatDate(request.fechaDecision)}
+        </small>
+      )}
+      {request.motivoRechazo && (
+        <p className="rejection-reason">
+          <strong>Motivo del rechazo:</strong> {request.motivoRechazo}
+        </p>
+      )}
+      {request.estado === "pendiente" && showRejectForm && (
+        <form className="frequency-rejection-form" onSubmit={handleReject}>
+          <label htmlFor={`frequency-rejection-${request.id}`}>
+            Motivo del rechazo <span aria-hidden="true">*</span>
+          </label>
+          <textarea
+            id={`frequency-rejection-${request.id}`}
+            value={reason}
+            onChange={(event) => {
+              setReason(event.target.value);
+              if (event.target.value.trim()) setError("");
+            }}
+            rows="2"
+            required
+          />
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <button className="button button-reject" type="submit">
+            Confirmar rechazo
+          </button>
+        </form>
+      )}
+    </article>
   );
 }
 
@@ -424,6 +576,12 @@ function DonationItem({
   onToggleDonor,
 }) {
   const isPending = donacion.estado === "pendiente";
+  const [showAcceptanceForm, setShowAcceptanceForm] = useState(false);
+  const [acceptedQuantity, setAcceptedQuantity] = useState(
+    String(donacion.cantidad),
+  );
+  const [discardReason, setDiscardReason] = useState("");
+  const [acceptanceError, setAcceptanceError] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionError, setRejectionError] = useState("");
@@ -438,6 +596,35 @@ function DonationItem({
 
     onRechazar(donacion.id, reason);
     setRejectionError("");
+  };
+
+  const numericAcceptedQuantity = Number(acceptedQuantity);
+  const discardedQuantity = Number.isFinite(numericAcceptedQuantity)
+    ? donacion.cantidad - numericAcceptedQuantity
+    : donacion.cantidad;
+
+  const handleAccept = (event) => {
+    event.preventDefault();
+    if (
+      !Number.isInteger(numericAcceptedQuantity) ||
+      numericAcceptedQuantity <= 0 ||
+      numericAcceptedQuantity > donacion.cantidad
+    ) {
+      setAcceptanceError(
+        `Ingresa una cantidad entre 1 y ${donacion.cantidad}.`,
+      );
+      return;
+    }
+    if (discardedQuantity > 0 && !discardReason.trim()) {
+      setAcceptanceError("El motivo del descarte parcial es obligatorio.");
+      return;
+    }
+
+    onAceptar(donacion.id, {
+      cantidadAceptada: numericAcceptedQuantity,
+      motivoDescarte: discardReason,
+    });
+    setAcceptanceError("");
   };
 
   return (
@@ -465,21 +652,73 @@ function DonationItem({
           <button
             className="button button-primary"
             type="button"
-            onClick={() => onAceptar(donacion.id)}
+            onClick={() => {
+              setShowAcceptanceForm((visible) => !visible);
+              setShowRejectForm(false);
+              setAcceptanceError("");
+            }}
           >
-            Aceptar
+            {showAcceptanceForm ? "Cancelar" : "Revisar aceptación"}
           </button>
           <button
             className="button button-muted"
             type="button"
             onClick={() => {
               setShowRejectForm((visible) => !visible);
+              setShowAcceptanceForm(false);
               setRejectionError("");
             }}
           >
             {showRejectForm ? "Cancelar" : "Rechazar"}
           </button>
         </div>
+      )}
+      {isPending && showAcceptanceForm && (
+        <form className="acceptance-form" onSubmit={handleAccept}>
+          <div className="acceptance-quantity-field">
+            <label htmlFor={`accepted-quantity-${donacion.id}`}>
+              Cantidad aceptada
+            </label>
+            <input
+              id={`accepted-quantity-${donacion.id}`}
+              type="number"
+              min="1"
+              max={donacion.cantidad}
+              step="1"
+              value={acceptedQuantity}
+              onChange={(event) => {
+                setAcceptedQuantity(event.target.value);
+                setAcceptanceError("");
+              }}
+              required
+            />
+          </div>
+          <div className="discarded-quantity">
+            <span>Cantidad descartada</span>
+            <strong>{Math.max(0, discardedQuantity)} unidades</strong>
+          </div>
+          {discardedQuantity > 0 && discardedQuantity < donacion.cantidad && (
+            <label className="acceptance-reason-field">
+              <span>Motivo del descarte parcial *</span>
+              <textarea
+                value={discardReason}
+                onChange={(event) => {
+                  setDiscardReason(event.target.value);
+                  if (event.target.value.trim()) setAcceptanceError("");
+                }}
+                placeholder="Describe por qué no se acepta el lote completo"
+                rows="3"
+                required
+              />
+            </label>
+          )}
+          {acceptanceError && (
+            <p className="form-error" role="alert">{acceptanceError}</p>
+          )}
+          <button className="button button-primary" type="submit">
+            Confirmar aceptación
+          </button>
+        </form>
       )}
       {isPending && showRejectForm && (
         <form className="rejection-form" onSubmit={handleReject}>
@@ -509,6 +748,28 @@ function DonationItem({
         <p className="rejection-reason">
           <strong>Motivo del rechazo:</strong> {donacion.motivoRechazo}
         </p>
+      )}
+      {donacion.estado.startsWith("aceptada") && (
+        <dl className="donation-resolution-summary">
+          <div>
+            <dt>Cantidad total</dt>
+            <dd>{donacion.cantidad} unidades</dd>
+          </div>
+          <div>
+            <dt>Cantidad aceptada</dt>
+            <dd>{donacion.cantidadAceptada ?? donacion.cantidad} unidades</dd>
+          </div>
+          <div>
+            <dt>Cantidad descartada</dt>
+            <dd>{donacion.cantidadDescartada ?? 0} unidades</dd>
+          </div>
+          {donacion.motivoDescarte && (
+            <div className="resolution-reason">
+              <dt>Motivo del descarte</dt>
+              <dd>{donacion.motivoDescarte}</dd>
+            </div>
+          )}
+        </dl>
       )}
     </article>
   );

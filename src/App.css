@@ -358,6 +358,105 @@
   align-items: center;
 }
 
+.frequent-request-identity {
+  grid-column: 1 / 3;
+}
+
+.request-data-summary,
+.donation-resolution-summary {
+  grid-column: 1 / -1;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.request-data-summary div,
+.donation-resolution-summary div {
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #f3f6f3;
+}
+
+.request-data-summary .requested-products-detail {
+  grid-column: span 2;
+}
+
+.request-products-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 2px;
+}
+
+.request-data-summary dt,
+.donation-resolution-summary dt {
+  color: #78847c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.request-data-summary dd,
+.donation-resolution-summary dd {
+  margin: 3px 0 0;
+  color: #3d5145;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.frequent-decision-actions,
+.decision-date {
+  grid-column: 1 / -1;
+}
+
+.frequency-rejection-form {
+  grid-column: 1 / -1;
+  border-left: 4px solid #b9503f;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  background: #fff6f3;
+}
+
+.frequency-rejection-form label,
+.frequency-rejection-form textarea,
+.frequency-rejection-form .form-error {
+  grid-column: 1 / -1;
+}
+
+.frequency-rejection-form label {
+  color: #66372f;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.frequency-review-history {
+  border-top: 1px solid #dfe5e0;
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.frequency-review-history summary {
+  display: flex;
+  justify-content: space-between;
+  color: #405649;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.frequency-review-history summary span {
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #e7ece8;
+}
+
+.frequency-review-history[open] summary {
+  margin-bottom: 10px;
+}
+
 .frequent-request-item p,
 .frequent-request-item small {
   margin-top: 2px;
@@ -624,6 +723,76 @@
   color: #24613d;
 }
 
+.acceptance-form {
+  grid-column: 1 / -1;
+  border-left: 4px solid #2f704b;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.6fr) minmax(180px, 0.6fr) 1fr;
+  gap: 12px;
+  align-items: end;
+  background: #f2f8f3;
+}
+
+.acceptance-quantity-field,
+.acceptance-reason-field {
+  display: grid;
+  gap: 6px;
+  color: #34483c;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.acceptance-quantity-field input,
+.acceptance-reason-field textarea,
+.frequency-rejection-form textarea {
+  width: 100%;
+  border: 1px solid #bccdc0;
+  border-radius: 7px;
+  padding: 9px 11px;
+  background: #fff;
+  color: #2d3831;
+  font: inherit;
+}
+
+.acceptance-reason-field {
+  grid-column: 1 / -1;
+}
+
+.acceptance-reason-field textarea,
+.frequency-rejection-form textarea {
+  resize: vertical;
+}
+
+.discarded-quantity {
+  border-radius: 7px;
+  padding: 9px 11px;
+  display: grid;
+  gap: 2px;
+  background: #e5eee7;
+  color: #506258;
+  font-size: 0.76rem;
+}
+
+.discarded-quantity strong {
+  color: #294c38;
+  font-size: 0.88rem;
+}
+
+.acceptance-form .form-error,
+.acceptance-form > .button {
+  grid-column: 1 / -1;
+}
+
+.donation-resolution-summary {
+  margin-top: 10px;
+}
+
+.donation-resolution-summary .resolution-reason {
+  grid-column: 1 / -1;
+  background: #fff5e9;
+}
+
 .rejection-form {
   grid-column: 1 / -1;
   border-left: 4px solid #b9503f;
@@ -774,6 +943,79 @@
   grid-column: 1 / -1;
 }
 
+.frequent-application-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) 1fr;
+  gap: 12px;
+  align-items: end;
+}
+
+.frequent-application-form > .button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.frequent-products-fieldset {
+  grid-column: 1 / -1;
+  min-width: 0;
+  border: 1px solid #dce3dd;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.frequent-products-fieldset legend {
+  padding: 0 6px;
+  color: #34483c;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.frequent-product-rows {
+  display: grid;
+  gap: 9px;
+}
+
+.frequent-product-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 0.55fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.frequent-product-row label {
+  display: grid;
+  gap: 6px;
+  color: #4b5e52;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.frequent-product-row input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #ccd5ce;
+  border-radius: 7px;
+  padding: 9px 11px;
+  color: #22342a;
+  font: inherit;
+}
+
+.add-product-button {
+  margin-top: 10px;
+}
+
+.remove-product-button {
+  min-height: 42px;
+  border: 0;
+  padding: 8px;
+  background: transparent;
+  color: #963b30;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .section-description {
   max-width: 720px;
   margin: -10px 0 16px;
@@ -816,6 +1058,11 @@
 
 .frequent-request-history small {
   color: #7a857e;
+}
+
+.frequent-request-history .request-rejection-copy {
+  color: #8d3024;
+  font-weight: 700;
 }
 
 .button {
@@ -882,7 +1129,11 @@
 
 .field input:focus,
 .field select:focus,
+.frequent-product-row input:focus,
 .rejection-form textarea:focus,
+.acceptance-quantity-field input:focus,
+.acceptance-reason-field textarea:focus,
+.frequency-rejection-form textarea:focus,
 .button:focus-visible,
 .demo-user:focus-visible,
 .bank-tab:focus-visible,
@@ -945,6 +1196,7 @@
 
 .status-pendiente { background: #fff0bd; color: #735907; }
 .status-aceptada,
+.status-aceptada-parcialmente,
 .status-aprobada,
 .status-asignada { background: #dcefdc; color: #225a34; }
 .status-entrega-coordinada { background: #dcebf0; color: #245568; }
@@ -1020,7 +1272,17 @@
   .frequent-summary { grid-template-columns: 1fr; }
   .review-heading { align-items: flex-start; flex-direction: column; }
   .frequent-request-item { grid-template-columns: 1fr; }
+  .frequent-request-identity { grid-column: 1; }
   .frequent-request-item .item-actions { justify-content: stretch; }
+  .request-data-summary,
+  .donation-resolution-summary,
+  .frequent-application-form,
+  .acceptance-form { grid-template-columns: 1fr; }
+  .request-data-summary .requested-products-detail { grid-column: 1; }
+  .frequent-product-row { grid-template-columns: 1fr; }
+  .remove-product-button { justify-self: start; }
+  .frequency-rejection-form { grid-template-columns: 1fr; }
+  .frequency-rejection-form .button-reject { grid-column: 1; }
   .rejection-form { grid-template-columns: 1fr; }
   .button-reject { grid-column: 1; }
   .frequent-request-history article { align-items: flex-start; flex-direction: column; }

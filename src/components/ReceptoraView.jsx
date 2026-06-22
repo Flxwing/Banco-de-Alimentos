@@ -14,6 +14,26 @@ const initialForm = {
   prioridad: "media",
 };
 
+const createInitialFrequentForm = () => ({
+  productos: [{ nombre: "", cantidad: "" }],
+  frecuencia: "quincenal",
+});
+
+function getFrequentProducts(request) {
+  if (Array.isArray(request.productos) && request.productos.length > 0) {
+    return request.productos;
+  }
+  if (request.productosFrecuentes) {
+    return [
+      {
+        nombre: request.productosFrecuentes,
+        cantidad: request.cantidadHabitual,
+      },
+    ];
+  }
+  return [];
+}
+
 export function ReceptoraView({
   user,
   solicitudes,
@@ -25,6 +45,7 @@ export function ReceptoraView({
   showToast,
 }) {
   const [form, setForm] = useState(initialForm);
+  const [frequentForm, setFrequentForm] = useState(createInitialFrequentForm);
 
   const misSolicitudes = useMemo(
     () => solicitudes.filter((solicitud) => solicitud.organizacion === user.name),
@@ -60,6 +81,48 @@ export function ReceptoraView({
 
     onSubmit(form);
     setForm(initialForm);
+  };
+
+  const handleFrequentRequest = (event) => {
+    event.preventDefault();
+    const invalidProduct = frequentForm.productos.some(
+      (product) =>
+        !product.nombre.trim() ||
+        !Number.isInteger(Number(product.cantidad)) ||
+        Number(product.cantidad) <= 0,
+    );
+    if (invalidProduct || !frequentForm.frecuencia) {
+      showToast("Completa todos los datos para solicitar frecuencia.", "error");
+      return;
+    }
+
+    onRequestFrequent(frequentForm);
+    setFrequentForm(createInitialFrequentForm());
+  };
+
+  const updateFrequentProduct = (index, field, value) => {
+    setFrequentForm((current) => ({
+      ...current,
+      productos: current.productos.map((product, productIndex) =>
+        productIndex === index ? { ...product, [field]: value } : product,
+      ),
+    }));
+  };
+
+  const addFrequentProduct = () => {
+    setFrequentForm((current) => ({
+      ...current,
+      productos: [...current.productos, { nombre: "", cantidad: "" }],
+    }));
+  };
+
+  const removeFrequentProduct = (index) => {
+    setFrequentForm((current) => ({
+      ...current,
+      productos: current.productos.filter(
+        (_, productIndex) => productIndex !== index,
+      ),
+    }));
   };
 
   return (
@@ -188,15 +251,80 @@ export function ReceptoraView({
         </p>
 
         {canRequestFrequent ? (
-          <button
-            className="button button-primary"
-            type="button"
-            onClick={onRequestFrequent}
-          >
-            {currentFrequentRequest
-              ? "Solicitar nuevamente"
-              : "Solicitar ser frecuente"}
-          </button>
+          <form className="frequent-application-form" onSubmit={handleFrequentRequest}>
+            <fieldset className="frequent-products-fieldset">
+              <legend>Productos y cantidades habituales</legend>
+              <div className="frequent-product-rows">
+                {frequentForm.productos.map((product, index) => (
+                  <div className="frequent-product-row" key={index}>
+                    <label>
+                      <span>Producto {index + 1}</span>
+                      <input
+                        value={product.nombre}
+                        onChange={(event) =>
+                          updateFrequentProduct(index, "nombre", event.target.value)
+                        }
+                        placeholder="Ej. Arroz"
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span>Cantidad habitual</span>
+                      <input
+                        value={product.cantidad}
+                        onChange={(event) =>
+                          updateFrequentProduct(index, "cantidad", event.target.value)
+                        }
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="Unidades"
+                        required
+                      />
+                    </label>
+                    {frequentForm.productos.length > 1 && (
+                      <button
+                        className="remove-product-button"
+                        type="button"
+                        aria-label={`Eliminar producto ${index + 1}`}
+                        onClick={() => removeFrequentProduct(index)}
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                className="button button-muted add-product-button"
+                type="button"
+                onClick={addFrequentProduct}
+              >
+                + Agregar producto
+              </button>
+            </fieldset>
+            <Field label="Cada cuánto los requiere">
+              <select
+                value={frequentForm.frecuencia}
+                onChange={(event) =>
+                  setFrequentForm({
+                    ...frequentForm,
+                    frecuencia: event.target.value,
+                  })
+                }
+              >
+                <option value="semanal">Semanal</option>
+                <option value="quincenal">Quincenal</option>
+                <option value="mensual">Mensual</option>
+                <option value="bimestral">Bimestral</option>
+              </select>
+            </Field>
+            <button className="button button-primary" type="submit">
+              {currentFrequentRequest
+                ? "Solicitar nuevamente"
+                : "Enviar solicitud de frecuente"}
+            </button>
+          </form>
         ) : (
           <div className="frequent-current-status">
             <span>Estado actual</span>
@@ -211,9 +339,23 @@ export function ReceptoraView({
               <article key={request.id}>
                 <div>
                   <span>Solicitud del {formatDate(request.fechaSolicitud)}</span>
+                  <ul className="request-products-list">
+                    {getFrequentProducts(request).map((product, index) => (
+                      <li key={`${product.nombre}-${index}`}>
+                        {product.nombre} — {product.cantidad || "Sin cantidad"}
+                        {product.cantidad ? " unidades" : ""}
+                      </li>
+                    ))}
+                  </ul>
+                  <small>Frecuencia: {request.frecuencia || "No indicada"}</small>
                   {request.fechaDecision && (
                     <small>
                       Resuelta el {formatDate(request.fechaDecision)}
+                    </small>
+                  )}
+                  {request.motivoRechazo && (
+                    <small className="request-rejection-copy">
+                      Motivo: {request.motivoRechazo}
                     </small>
                   )}
                 </div>
