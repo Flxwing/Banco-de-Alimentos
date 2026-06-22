@@ -1,9 +1,17 @@
 import { useMemo, useState } from "react";
-import { EmptyState, ExpiryBadge, Field, StatusBadge } from "./ui.jsx";
+import {
+  CategoryBadge,
+  EmptyState,
+  ExpiryBadge,
+  Field,
+  StatusBadge,
+} from "./ui.jsx";
 import { formatDate, getTodayInputValue } from "../utils/dateUtils.js";
+import { productCategories } from "../data/mockData.js";
 
 const initialForm = {
   producto: "",
+  tipo: "otro",
   cantidad: "",
   vencimiento: "",
 };
@@ -50,7 +58,6 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
         <div className="section-heading">
           <span className="eyebrow">Nueva disponibilidad</span>
           <h2>Registrar donación</h2>
-          <p>Indica el alimento, la cantidad disponible y su vencimiento.</p>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>
@@ -69,6 +76,18 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
               <option value={product} key={product} />
             ))}
           </datalist>
+          <Field label="Tipo de producto">
+            <select
+              value={form.tipo}
+              onChange={(event) => setForm({ ...form, tipo: event.target.value })}
+            >
+              {productCategories.map((category) => (
+                <option value={category} key={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Cantidad disponible">
             <input
               value={form.cantidad}
@@ -100,7 +119,6 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
         <div className="section-heading">
           <span className="eyebrow">Seguimiento</span>
           <h2>Mis donaciones</h2>
-          <p>Consulta la revisión de los alimentos que has registrado.</p>
         </div>
         <div className="item-list">
           {misDonaciones.length === 0 ? (
@@ -119,6 +137,7 @@ export function DonanteView({ user, donaciones, onSubmit, showToast }) {
                   <StatusBadge estado={donacion.estado} />
                 </div>
                 <div className="item-footer">
+                  <CategoryBadge tipo={donacion.tipo} />
                   <span>Vence {formatDate(donacion.vencimiento)}</span>
                   <ExpiryBadge date={donacion.vencimiento} />
                 </div>

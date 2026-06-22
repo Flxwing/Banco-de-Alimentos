@@ -4,6 +4,17 @@ export const roleLabels = {
   receptora: "Organización receptora",
 };
 
+export const productCategories = [
+  "fruta",
+  "vegetal",
+  "lácteo",
+  "cereal",
+  "enlatado",
+  "bebida",
+  "panadería",
+  "otro",
+];
+
 export const mockUsers = [
   {
     id: "banco1",
@@ -76,6 +87,7 @@ export const initialDonaciones = [
     id: 1,
     donante: "Supermercado San Carlos",
     producto: "Arroz",
+    tipo: "cereal",
     cantidad: 20,
     vencimiento: "2026-06-28",
     estado: "pendiente",
@@ -84,6 +96,7 @@ export const initialDonaciones = [
     id: 2,
     donante: "Panadería La Espiga",
     producto: "Pan empacado",
+    tipo: "panadería",
     cantidad: 15,
     vencimiento: "2026-06-23",
     estado: "pendiente",
@@ -92,6 +105,7 @@ export const initialDonaciones = [
     id: 3,
     donante: "Finca El Porvenir",
     producto: "Plátano",
+    tipo: "fruta",
     cantidad: 30,
     vencimiento: "2026-06-24",
     estado: "aceptada",
@@ -103,6 +117,7 @@ export const initialSolicitudes = [
     id: 1,
     organizacion: "Hogar Esperanza",
     producto: "Arroz",
+    tipo: "cereal",
     cantidad: 10,
     prioridad: "alta",
     estado: "pendiente",
@@ -111,6 +126,7 @@ export const initialSolicitudes = [
     id: 2,
     organizacion: "Comedor Solidario",
     producto: "Frijoles",
+    tipo: "cereal",
     cantidad: 8,
     prioridad: "media",
     estado: "pendiente",
@@ -119,6 +135,7 @@ export const initialSolicitudes = [
     id: 3,
     organizacion: "Fundación Manos Unidas",
     producto: "Plátano",
+    tipo: "fruta",
     cantidad: 12,
     prioridad: "media",
     estado: "asignada",
@@ -127,6 +144,7 @@ export const initialSolicitudes = [
     id: 4,
     organizacion: "Comedor Solidario",
     producto: "Plátano",
+    tipo: "fruta",
     cantidad: 6,
     prioridad: "baja",
     estado: "entrega coordinada",
@@ -137,18 +155,21 @@ export const initialInventario = [
   {
     id: 1,
     producto: "Frijoles",
+    tipo: "cereal",
     cantidad: 12,
     vencimiento: "2026-07-01",
   },
   {
     id: 2,
     producto: "Plátano",
+    tipo: "fruta",
     cantidad: 18,
     vencimiento: "2026-06-24",
   },
   {
     id: 3,
     producto: "Leche UHT",
+    tipo: "lácteo",
     cantidad: 8,
     vencimiento: "2026-06-22",
   },

@@ -30,7 +30,6 @@ export function LoginView({ users, error, onLogin }) {
         <div className="section-heading login-heading">
           <span className="eyebrow">Acceso seguro</span>
           <h2>Iniciar sesión</h2>
-          <p>Ingresa con las credenciales asignadas a tu organización.</p>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>

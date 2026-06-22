@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import {
+  CategoryBadge,
   EmptyState,
   Field,
   PriorityBadge,
   StatusBadge,
 } from "./ui.jsx";
+import { getExpiryInfo } from "../utils/dateUtils.js";
 
 const initialForm = {
   producto: "",
@@ -26,7 +28,10 @@ export function ReceptoraView({
     () => solicitudes.filter((solicitud) => solicitud.organizacion === user.name),
     [solicitudes, user.name],
   );
-  const productosDisponibles = inventario.filter((item) => item.cantidad > 0);
+  const productosDisponibles = inventario.filter(
+    (item) =>
+      item.cantidad > 0 && getExpiryInfo(item.vencimiento).level !== "expired",
+  );
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -51,7 +56,6 @@ export function ReceptoraView({
         <div className="section-heading">
           <span className="eyebrow">Nueva necesidad</span>
           <h2>Solicitar alimentos</h2>
-          <p>Registra el producto requerido, la cantidad y su nivel de prioridad.</p>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>
@@ -118,7 +122,6 @@ export function ReceptoraView({
         <div className="section-heading">
           <span className="eyebrow">Seguimiento</span>
           <h2>Mis solicitudes</h2>
-          <p>Consulta asignaciones y confirma los alimentos recibidos.</p>
         </div>
         <div className="item-list">
           {misSolicitudes.length === 0 ? (
@@ -137,6 +140,7 @@ export function ReceptoraView({
                   <StatusBadge estado={solicitud.estado} />
                 </div>
                 <div className="item-footer">
+                  <CategoryBadge tipo={solicitud.tipo} />
                   <PriorityBadge prioridad={solicitud.prioridad} />
                 </div>
                 {solicitud.estado === "entrega coordinada" && (

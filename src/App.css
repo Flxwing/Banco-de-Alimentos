@@ -143,10 +143,6 @@
   line-height: 1.05;
 }
 
-.header-copy p {
-  color: rgba(255, 255, 255, 0.76);
-}
-
 .session-panel {
   min-width: 310px;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -225,7 +221,6 @@
 }
 
 .section-heading p,
-.panel-heading p,
 .muted-text {
   color: #66736b;
 }
@@ -236,6 +231,58 @@
 
 .bank-overview {
   margin-bottom: 20px;
+}
+
+.frequent-actors {
+  border-block: 1px solid #dce2dd;
+  margin-bottom: 20px;
+  padding: 14px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.frequent-group {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.frequent-group > strong {
+  color: #42564a;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.frequent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.frequent-chip {
+  min-height: 32px;
+  border: 1px solid #d8dfda;
+  border-radius: 999px;
+  padding: 5px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f7f9f7;
+  color: #3d5145;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.frequent-chip span {
+  color: #a87413;
+}
+
+.frequent-empty {
+  color: #859087;
+  font-size: 0.82rem;
 }
 
 .stats-row {
@@ -326,11 +373,6 @@
   justify-content: space-between;
   gap: 28px;
   align-items: end;
-}
-
-.panel-heading p {
-  max-width: 560px;
-  text-align: right;
 }
 
 .management-list,
@@ -432,6 +474,40 @@
   color: #69766f;
 }
 
+.actor-line {
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actor-line p {
+  margin: 0;
+}
+
+.pin-button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #829087;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.pin-button:hover {
+  background: #f1f4f1;
+  color: #a87413;
+}
+
+.pin-button.is-pinned {
+  color: #a87413;
+}
+
 .item-facts {
   display: flex;
   flex-wrap: wrap;
@@ -439,7 +515,7 @@
   align-items: center;
 }
 
-.item-facts > span:not(.status-badge):not(.expiry-badge):not(.priority-badge) {
+.item-facts > span:not(.status-badge):not(.expiry-badge):not(.priority-badge):not(.category-badge) {
   display: grid;
   gap: 2px;
   color: #35483d;
@@ -477,7 +553,7 @@
   border-bottom: 1px solid #dce2dd;
   padding: 13px 14px;
   display: grid;
-  grid-template-columns: 1.35fr 0.8fr 1fr 1fr;
+  grid-template-columns: 1.25fr 0.75fr 0.8fr 1fr 1.15fr;
   gap: 16px;
   align-items: center;
   background: #fff;
@@ -492,12 +568,12 @@
   text-transform: uppercase;
 }
 
-.inventory-critical {
+.inventory-urgent {
   border-left: 4px solid #c96b25;
   background: #fff8ef;
 }
 
-.inventory-warning {
+.inventory-soon {
   border-left: 4px solid #d0a535;
   background: #fffdf4;
 }
@@ -627,6 +703,8 @@
 .button:focus-visible,
 .demo-user:focus-visible,
 .bank-tab:focus-visible,
+.pin-button:focus-visible,
+.frequent-chip:focus-visible,
 .account-directory summary:focus-visible {
   outline: 3px solid rgba(55, 126, 84, 0.25);
   outline-offset: 2px;
@@ -669,7 +747,8 @@
 .status-badge,
 .role-badge,
 .priority-badge,
-.expiry-badge {
+.expiry-badge,
+.category-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -693,10 +772,11 @@
 .priority-alta { background: #f8d9d1; color: #8b3326; }
 .priority-media { background: #fff0bd; color: #735907; }
 .priority-baja { background: #e3ebe5; color: #466052; }
-.expiry-critical,
-.expiry-expired { background: #f8ddd5; color: #923628; }
-.expiry-warning { background: #fff0bd; color: #735907; }
+.expiry-urgent { background: #f8ddd5; color: #923628; }
+.expiry-expired { background: #ead7d3; color: #7e2f25; }
+.expiry-soon { background: #fff0bd; color: #735907; }
 .expiry-normal { background: #e1eee4; color: #2d6240; }
+.category-badge { background: #e5ebef; color: #405965; }
 .role-banco { background: #d8eadc; color: #244f32; }
 .role-donante { background: #f4e5bd; color: #735b18; }
 .role-receptora { background: #dcebf0; color: #285668; }
@@ -737,7 +817,6 @@
   .session-panel { min-width: 0; width: 100%; }
   .bank-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .panel-heading { display: block; }
-  .panel-heading p { margin-top: 5px; text-align: left; }
   .management-item { grid-template-columns: 1fr auto; }
   .item-facts { grid-column: 1 / -1; }
   .item-actions { grid-column: 2; grid-row: 1; }
@@ -754,6 +833,7 @@
   .session-panel,
   .demo-user,
   .item-top { align-items: stretch; flex-direction: column; }
+  .frequent-actors { grid-template-columns: 1fr; gap: 14px; }
   .bank-stats { grid-template-columns: 1fr 1fr; }
   .stat-card { min-height: 102px; }
   .bank-tabs {

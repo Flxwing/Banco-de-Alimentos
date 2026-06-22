@@ -21,6 +21,13 @@ export function PriorityBadge({ prioridad = "media" }) {
   );
 }
 
+export function CategoryBadge({ tipo = "otro" }) {
+  const categoryClass = tipo.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return (
+    <span className={`category-badge category-${categoryClass}`}>{tipo}</span>
+  );
+}
+
 export function ExpiryBadge({ date }) {
   const info = getExpiryInfo(date);
   return (

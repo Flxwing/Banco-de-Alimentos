@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { AppHeader } from "./components/AppHeader.jsx";
 import { BancoView } from "./components/BancoView.jsx";
@@ -11,8 +11,20 @@ import {
   initialSolicitudes,
   mockUsers,
 } from "./data/mockData.js";
+import { getExpiryInfo } from "./utils/dateUtils.js";
 
 const toastDuration = 2800;
+const pinnedDonorsKey = "banco-alimentos-pinned-donors";
+const pinnedRecipientsKey = "banco-alimentos-pinned-recipients";
+
+function loadPinnedActors(key) {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(key));
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -22,6 +34,31 @@ export default function App() {
   const [donaciones, setDonaciones] = useState(initialDonaciones);
   const [solicitudes, setSolicitudes] = useState(initialSolicitudes);
   const [inventario, setInventario] = useState(initialInventario);
+  const [pinnedDonors, setPinnedDonors] = useState(() =>
+    loadPinnedActors(pinnedDonorsKey),
+  );
+  const [pinnedRecipients, setPinnedRecipients] = useState(() =>
+    loadPinnedActors(pinnedRecipientsKey),
+  );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(pinnedDonorsKey, JSON.stringify(pinnedDonors));
+    } catch {
+      // La sesión actual conserva los favoritos aunque el navegador bloquee storage.
+    }
+  }, [pinnedDonors]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        pinnedRecipientsKey,
+        JSON.stringify(pinnedRecipients),
+      );
+    } catch {
+      // La sesión actual conserva los favoritos aunque el navegador bloquee storage.
+    }
+  }, [pinnedRecipients]);
 
   const bancoStats = useMemo(() => {
     const donacionesPendientes = donaciones.filter(
@@ -30,7 +67,11 @@ export default function App() {
     const solicitudesPendientes = solicitudes.filter(
       (solicitud) => solicitud.estado === "pendiente",
     ).length;
-    const inventarioDisponible = inventario.reduce(
+    const inventarioDistribuible = inventario.filter(
+      (item) =>
+        item.cantidad > 0 && getExpiryInfo(item.vencimiento).level !== "expired",
+    );
+    const inventarioDisponible = inventarioDistribuible.reduce(
       (total, item) => total + item.cantidad,
       0,
     );
@@ -39,7 +80,7 @@ export default function App() {
       donacionesPendientes,
       solicitudesPendientes,
       inventarioDisponible,
-      productosInventario: inventario.length,
+      productosInventario: inventarioDistribuible.length,
     };
   }, [donaciones, solicitudes, inventario]);
 
@@ -76,6 +117,11 @@ export default function App() {
     const donacion = donaciones.find((item) => item.id === id);
     if (!donacion) return;
 
+    if (getExpiryInfo(donacion.vencimiento).level === "expired") {
+      showToast("No se puede aceptar una donación vencida.", "error");
+      return;
+    }
+
     setDonaciones((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, estado: "aceptada" } : item,
@@ -84,7 +130,9 @@ export default function App() {
 
     setInventario((prev) => {
       const existente = prev.find(
-        (item) => item.producto.toLowerCase() === donacion.producto.toLowerCase(),
+        (item) =>
+          item.producto.toLowerCase() === donacion.producto.toLowerCase() &&
+          item.tipo === donacion.tipo,
       );
 
       if (existente) {
@@ -107,6 +155,7 @@ export default function App() {
         {
           id: Date.now(),
           producto: donacion.producto,
+          tipo: donacion.tipo,
           cantidad: donacion.cantidad,
           vencimiento: donacion.vencimiento,
         },
@@ -129,11 +178,14 @@ export default function App() {
     const solicitud = solicitudes.find((item) => item.id === id);
     if (!solicitud) return;
 
-    const itemInventario = inventario.find(
-      (item) =>
-        item.producto.toLowerCase() === solicitud.producto.toLowerCase() &&
-        item.cantidad >= solicitud.cantidad,
-    );
+    const itemInventario = inventario
+      .filter(
+        (item) =>
+          item.producto.toLowerCase() === solicitud.producto.toLowerCase() &&
+          item.cantidad >= solicitud.cantidad &&
+          getExpiryInfo(item.vencimiento).level !== "expired",
+      )
+      .sort((a, b) => new Date(a.vencimiento) - new Date(b.vencimiento))[0];
 
     if (!itemInventario) {
       showToast("No hay inventario suficiente para esa solicitud.", "error");
@@ -183,6 +235,7 @@ export default function App() {
         id: Date.now(),
         donante: currentUser.name,
         producto: form.producto,
+        tipo: form.tipo,
         cantidad: Number(form.cantidad),
         vencimiento: form.vencimiento,
         estado: "pendiente",
@@ -194,11 +247,16 @@ export default function App() {
   };
 
   const registrarSolicitud = (form) => {
+    const productoInventario = inventario.find(
+      (item) => item.producto.toLowerCase() === form.producto.toLowerCase(),
+    );
+
     setSolicitudes((prev) => [
       {
         id: Date.now(),
         organizacion: currentUser.name,
         producto: form.producto,
+        tipo: productoInventario?.tipo || "otro",
         cantidad: Number(form.cantidad),
         prioridad: form.prioridad,
         estado: "pendiente",
@@ -207,6 +265,14 @@ export default function App() {
     ]);
 
     showToast("Solicitud registrada correctamente.");
+  };
+
+  const togglePinnedActor = (setter, name) => {
+    setter((prev) =>
+      prev.includes(name)
+        ? prev.filter((actor) => actor !== name)
+        : [...prev, name],
+    );
   };
 
   if (!currentUser) {
@@ -237,6 +303,12 @@ export default function App() {
           onRechazarDonacion={rechazarDonacion}
           onAsignarSolicitud={asignarSolicitud}
           onCoordinarEntrega={coordinarEntrega}
+          pinnedDonors={pinnedDonors}
+          pinnedRecipients={pinnedRecipients}
+          onToggleDonor={(name) => togglePinnedActor(setPinnedDonors, name)}
+          onToggleRecipient={(name) =>
+            togglePinnedActor(setPinnedRecipients, name)
+          }
         />
       )}
 

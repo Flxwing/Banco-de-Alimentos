@@ -7,7 +7,6 @@ export function AppHeader({ user, onLogout }) {
       <div className="header-copy">
         <span className="eyebrow">Gestión de distribución alimentaria</span>
         <h1>Banco de Alimentos</h1>
-        <p>Donaciones, inventario y entregas en un mismo lugar.</p>
       </div>
 
       <aside className="session-panel" aria-label="Sesión actual">
