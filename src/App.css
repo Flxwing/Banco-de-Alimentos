@@ -338,6 +338,67 @@
   border-top: 1px solid #dce2dd;
 }
 
+.history-section {
+  border-top: 1px solid #dce2dd;
+  margin-top: 30px;
+  padding-top: 4px;
+}
+
+.history-section summary {
+  min-height: 52px;
+  padding: 12px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #607067;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.history-section summary::marker {
+  color: #789083;
+}
+
+.history-section summary small {
+  min-width: 26px;
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: #e7ece8;
+  color: #52645a;
+  text-align: center;
+}
+
+.history-section[open] summary {
+  color: #354d40;
+}
+
+.history-content {
+  padding: 0 4px 6px;
+}
+
+.history-list {
+  border: 1px solid #e0e5e1;
+  background: #f7f9f7;
+}
+
+.history-list .management-item {
+  min-height: 82px;
+  padding-inline: 14px;
+}
+
+.history-list .management-item:last-child {
+  border-bottom: 0;
+}
+
+.history-empty {
+  border: 1px dashed #cdd5cf;
+  padding: 18px;
+  background: #f8faf8;
+  color: #748078;
+  text-align: center;
+}
+
 .management-item {
   min-height: 94px;
   border-bottom: 1px solid #dce2dd;
@@ -625,7 +686,9 @@
 .status-aceptada,
 .status-asignada { background: #dcefdc; color: #225a34; }
 .status-entrega-coordinada { background: #dcebf0; color: #245568; }
-.status-recibida { background: #d8eee5; color: #1f5f47; }
+.status-recibida,
+.status-completada,
+.status-cerrada { background: #d8eee5; color: #1f5f47; }
 .status-rechazada { background: #f6d9d3; color: #8d3024; }
 .priority-alta { background: #f8d9d1; color: #8b3326; }
 .priority-media { background: #fff0bd; color: #735907; }

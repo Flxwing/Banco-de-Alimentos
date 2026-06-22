@@ -15,6 +15,8 @@ const tabs = [
   { id: "entregas", label: "Entregas" },
 ];
 
+const finalDeliveryStates = new Set(["recibida", "completada", "cerrada"]);
+
 export function BancoView({
   donaciones,
   solicitudes,
@@ -30,11 +32,19 @@ export function BancoView({
   const solicitudesPendientes = solicitudes.filter(
     (solicitud) => solicitud.estado === "pendiente",
   );
-  const entregas = solicitudes.filter(
-    (solicitud) => solicitud.estado !== "pendiente",
+  const donacionesPendientes = donaciones.filter(
+    (donacion) => donacion.estado === "pendiente",
   );
-  const entregasActivas = entregas.filter(
-    (solicitud) => solicitud.estado !== "recibida",
+  const donacionesProcesadas = donaciones.filter(
+    (donacion) => donacion.estado !== "pendiente",
+  );
+  const entregasActivas = solicitudes.filter(
+    (solicitud) =>
+      solicitud.estado !== "pendiente" &&
+      !finalDeliveryStates.has(solicitud.estado),
+  );
+  const entregasFinalizadas = solicitudes.filter((solicitud) =>
+    finalDeliveryStates.has(solicitud.estado),
   );
   const inventarioOrdenado = useMemo(
     () =>
@@ -106,7 +116,8 @@ export function BancoView({
       <section className="bank-panel" role="tabpanel">
         {activeTab === "donaciones" && (
           <DonationPanel
-            donaciones={donaciones}
+            pendientes={donacionesPendientes}
+            procesadas={donacionesProcesadas}
             onAceptar={onAceptarDonacion}
             onRechazar={onRechazarDonacion}
           />
@@ -125,7 +136,8 @@ export function BancoView({
 
         {activeTab === "entregas" && (
           <DeliveriesPanel
-            entregas={entregas}
+            activas={entregasActivas}
+            finalizadas={entregasFinalizadas}
             onCoordinar={onCoordinarEntrega}
           />
         )}
@@ -146,58 +158,80 @@ function PanelHeading({ eyebrow, title, text }) {
   );
 }
 
-function DonationPanel({ donaciones, onAceptar, onRechazar }) {
+function DonationPanel({ pendientes, procesadas, onAceptar, onRechazar }) {
   return (
     <>
       <PanelHeading
         eyebrow="Recepción"
-        title="Donaciones registradas"
+        title="Donaciones pendientes"
         text="Revisa disponibilidad y vencimiento antes de incorporar alimentos al inventario."
       />
       <div className="management-list">
-        {donaciones.length === 0 ? (
+        {pendientes.length === 0 ? (
           <EmptyState
-            title="No hay donaciones registradas"
-            text="Las nuevas donaciones aparecerán aquí para su revisión."
+            title="No hay donaciones pendientes"
+            text="Todas las donaciones registradas ya fueron procesadas."
           />
         ) : (
-          donaciones.map((donacion) => (
-            <article className="management-item" key={donacion.id}>
-              <div className="item-primary">
-                <div className="item-title-line">
-                  <strong>{donacion.producto}</strong>
-                  <StatusBadge estado={donacion.estado} />
-                </div>
-                <p>{donacion.donante}</p>
-              </div>
-              <div className="item-facts">
-                <span><small>Cantidad</small>{donacion.cantidad} unidades</span>
-                <span><small>Vencimiento</small>{formatDate(donacion.vencimiento)}</span>
-                <ExpiryBadge date={donacion.vencimiento} />
-              </div>
-              {donacion.estado === "pendiente" && (
-                <div className="item-actions">
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    onClick={() => onAceptar(donacion.id)}
-                  >
-                    Aceptar
-                  </button>
-                  <button
-                    className="button button-muted"
-                    type="button"
-                    onClick={() => onRechazar(donacion.id)}
-                  >
-                    Rechazar
-                  </button>
-                </div>
-              )}
-            </article>
+          pendientes.map((donacion) => (
+            <DonationItem
+              donacion={donacion}
+              onAceptar={onAceptar}
+              onRechazar={onRechazar}
+              key={donacion.id}
+            />
           ))
         )}
       </div>
+      <HistorySection
+        title="Historial de donaciones"
+        count={procesadas.length}
+        emptyText="Aún no hay donaciones procesadas."
+      >
+        {procesadas.map((donacion) => (
+          <DonationItem donacion={donacion} key={donacion.id} />
+        ))}
+      </HistorySection>
     </>
+  );
+}
+
+function DonationItem({ donacion, onAceptar, onRechazar }) {
+  const isPending = donacion.estado === "pendiente";
+
+  return (
+    <article className="management-item" key={donacion.id}>
+      <div className="item-primary">
+        <div className="item-title-line">
+          <strong>{donacion.producto}</strong>
+          <StatusBadge estado={donacion.estado} />
+        </div>
+        <p>{donacion.donante}</p>
+      </div>
+      <div className="item-facts">
+        <span><small>Cantidad</small>{donacion.cantidad} unidades</span>
+        <span><small>Vencimiento</small>{formatDate(donacion.vencimiento)}</span>
+        <ExpiryBadge date={donacion.vencimiento} />
+      </div>
+      {isPending && (
+        <div className="item-actions">
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => onAceptar(donacion.id)}
+          >
+            Aceptar
+          </button>
+          <button
+            className="button button-muted"
+            type="button"
+            onClick={() => onRechazar(donacion.id)}
+          >
+            Rechazar
+          </button>
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -288,55 +322,92 @@ function RequestsPanel({ solicitudes, onAsignar }) {
   );
 }
 
-function DeliveriesPanel({ entregas, onCoordinar }) {
+function DeliveriesPanel({ activas, finalizadas, onCoordinar }) {
   return (
     <>
       <PanelHeading
         eyebrow="Distribución"
-        title="Seguimiento de entregas"
-        text="Coordina solicitudes asignadas y consulta las recepciones confirmadas."
+        title="Entregas activas"
+        text="Coordina solicitudes asignadas y da seguimiento a las entregas en proceso."
       />
       <div className="management-list">
-        {entregas.length === 0 ? (
+        {activas.length === 0 ? (
           <EmptyState
-            title="No hay entregas en seguimiento"
-            text="Las solicitudes asignadas pasarán a esta sección."
+            title="No hay entregas activas"
+            text="Las solicitudes asignadas aparecerán aquí para su coordinación."
           />
         ) : (
-          entregas.map((entrega) => (
-            <article className="management-item" key={entrega.id}>
-              <div className="item-primary">
-                <div className="item-title-line">
-                  <strong>{entrega.producto}</strong>
-                  <StatusBadge estado={entrega.estado} />
-                </div>
-                <p>{entrega.organizacion}</p>
-              </div>
-              <div className="item-facts">
-                <span><small>Cantidad</small>{entrega.cantidad} unidades</span>
-                <PriorityBadge prioridad={entrega.prioridad} />
-              </div>
-              {entrega.estado === "asignada" && (
-                <div className="item-actions">
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    onClick={() => onCoordinar(entrega.id)}
-                  >
-                    Coordinar entrega
-                  </button>
-                </div>
-              )}
-              {entrega.estado === "entrega coordinada" && (
-                <p className="item-note">Esperando confirmación de la organización.</p>
-              )}
-              {entrega.estado === "recibida" && (
-                <p className="item-note item-note-success">Recepción confirmada.</p>
-              )}
-            </article>
+          activas.map((entrega) => (
+            <DeliveryItem
+              entrega={entrega}
+              onCoordinar={onCoordinar}
+              key={entrega.id}
+            />
           ))
         )}
       </div>
+      <HistorySection
+        title="Historial de entregas"
+        count={finalizadas.length}
+        emptyText="Aún no hay entregas finalizadas."
+      >
+        {finalizadas.map((entrega) => (
+          <DeliveryItem entrega={entrega} key={entrega.id} />
+        ))}
+      </HistorySection>
     </>
+  );
+}
+
+function DeliveryItem({ entrega, onCoordinar }) {
+  return (
+    <article className="management-item">
+      <div className="item-primary">
+        <div className="item-title-line">
+          <strong>{entrega.producto}</strong>
+          <StatusBadge estado={entrega.estado} />
+        </div>
+        <p>{entrega.organizacion}</p>
+      </div>
+      <div className="item-facts">
+        <span><small>Cantidad</small>{entrega.cantidad} unidades</span>
+        <PriorityBadge prioridad={entrega.prioridad} />
+      </div>
+      {entrega.estado === "asignada" && (
+        <div className="item-actions">
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => onCoordinar(entrega.id)}
+          >
+            Coordinar entrega
+          </button>
+        </div>
+      )}
+      {entrega.estado === "entrega coordinada" && (
+        <p className="item-note">Esperando confirmación de la organización.</p>
+      )}
+      {finalDeliveryStates.has(entrega.estado) && (
+        <p className="item-note item-note-success">Entrega finalizada.</p>
+      )}
+    </article>
+  );
+}
+
+function HistorySection({ title, count, emptyText, children }) {
+  return (
+    <details className="history-section">
+      <summary>
+        <span>{title}</span>
+        <small>{count}</small>
+      </summary>
+      <div className="history-content">
+        {count === 0 ? (
+          <p className="history-empty">{emptyText}</p>
+        ) : (
+          <div className="management-list history-list">{children}</div>
+        )}
+      </div>
+    </details>
   );
 }
